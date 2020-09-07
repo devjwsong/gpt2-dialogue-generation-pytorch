@@ -126,4 +126,12 @@ venv.bak/
 dmypy.json
 
 # Pyre type checker
-.pyre/
+.pyreo/
+
+# Large size directories
+data/
+saved_models/
+
+# Notebook
+run.ipynb
+nohup.out
