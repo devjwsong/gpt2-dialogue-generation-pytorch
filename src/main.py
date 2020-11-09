@@ -54,10 +54,6 @@ class Manager():
             self.optim = torch.optim.AdamW(self.model.parameters(), lr=self.config['learning_rate'])
             self.best_loss = sys.float_info.max
             
-            
-            
-            
-            
             # Load train & valid dataset
             print("Loading train & valid data...")
             train_set = CustomDataset('train', self.config)
@@ -91,31 +87,41 @@ class Manager():
             self.model.train()
             
             print(f"#################### Epoch: {epoch} ####################")
-            train_losses = []  
+            lm_train_losses = []
+            mc_train_losses = []
+            total_train_losses = []
             for i, batch in enumerate(tqdm(self.train_loader)):
-                src_inputs, trg_inputs, trg_outputs, e_mask, d_mask = batch
-                src_inputs, trg_inputs, trg_outputs, e_mask, d_mask = \
-                    src_inputs.to(self.config['device']), trg_inputs.to(self.config['device']), trg_outputs.to(self.config['device']), \
-                    e_mask.to(self.config['device']), d_mask.to(self.config['device'])
-              
-                output = self.model(src_inputs, trg_inputs, e_mask, d_mask)  # (B, L, vocab_size)
+                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = batch
+                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = \
+                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), token_type_ids.to(self.config['device']), \
+                    mc_token_ids.to(self.config['device']), lm_labels.to(self.config['device']), mc_labels.to(self.config['device'])
                 
-                self.optim.zero_grad()
-                
-                loss = self.criterion(
-                    output.view(-1, self.config['vocab_size']),
-                    trg_outputs.contiguous().view(output.shape[0] * output.shape[1])
+                outputs = self.model(
+                    input_ids=input_ids,
+                    attention_mask = attention_masks,
+                    token_type_ids = token_type_ids,
+                    mc_token_ids = mc_token_ids,
+                    labels = lm_labels,
+                    mc_labels = mc_labels
                 )
                 
+                lm_loss, mc_loss = outputs[0], outputs[1]
+                loss = self.config['lm_coef'] * lm_loss + self.config['mc_coef']
+                
+                self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
                 
-                train_losses.append(loss.item())
-              
-            mean_train_loss = np.mean(train_losses)
-            print(f"Train loss: {mean_train_loss}")
+                lm_train_losses.append(lm_loss.item())
+                mc_train_losses.append(mc_loss.item())
+                total_train_losses.append(loss.itme())
             
-            valid_loss = self.validation()
+            lm_train_loss = np.mean(lm_train_losses)
+            mc_train_loss = np.mean(mc_train_losses)
+            total_train_loss = np.mean(train_losses)
+            print(f"Train loss: {total_train_loss} || LM loss: {lm_train_loss} || MC loss: {mc_train_loss}")
+            
+            lm_valid_loss, mc_valid_loss, valid_loss = self.validation()
               
             if valid_loss < self.best_loss:
                 state_dict = {
@@ -137,26 +143,37 @@ class Manager():
         print("Validation processing...")
         self.model.eval()
               
-        valid_losses = []
+        lm_valid_losses = []
+        mc_valid_losses = []
+        total_valid_losses = []
         with torch.no_grad():
             for i, batch in enumerate(tqdm(self.valid_loader)):
-                src_inputs, trg_inputs, trg_outputs, e_mask, d_mask = batch
-                src_inputs, trg_inputs, trg_outputs, e_mask, d_mask = \
-                    src_inputs.to(self.config['device']), trg_inputs.to(self.config['device']), trg_outputs.to(self.config['device']), \
-                    e_mask.to(self.config['device']), d_mask.to(self.config['device'])
-              
-                output = self.model(src_inputs, trg_inputs, e_mask, d_mask)  # (B, L, vocab_size)
+                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = batch
+                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = \
+                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), token_type_ids.to(self.config['device']), \
+                    mc_token_ids.to(self.config['device']), lm_labels.to(self.config['device']), mc_labels.to(self.config['device'])
                 
-                loss = self.criterion(
-                    output.view(-1, self.config['vocab_size']),
-                    trg_outputs.contiguous().view(output.shape[0] * output.shape[1])
+                outputs = self.model(
+                    input_ids=input_ids,
+                    attention_mask = attention_masks,
+                    token_type_ids = token_type_ids,
+                    mc_token_ids = mc_token_ids,
+                    labels = lm_labels,
+                    mc_labels = mc_labels
                 )
                 
-                valid_losses.append(loss.item())
+                lm_loss, mc_loss = outputs[0], outputs[1]
+                loss = self.config['lm_coef'] * lm_loss + self.config['mc_coef']
+                
+                lm_valid_losses.append(lm_loss.item())
+                mc_valid_losses.append(mc_loss.item())
+                total_valid_losses.append(loss.itme())
               
-        mean_valid_loss = np.mean(valid_losses)
+            lm_valid_loss = np.mean(lm_valid_losses)
+            mc_valid_loss = np.mean(mc_valid_losses)
+            total_valid_loss = np.mean(total_valid_losses)
               
-        return mean_valid_loss
+        return lm_valid_loss, mc_valid_loss, total_valid_loss
         
               
     def inference(self):
