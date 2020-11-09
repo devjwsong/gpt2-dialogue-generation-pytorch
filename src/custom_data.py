@@ -47,11 +47,11 @@ class CustomDataset(Dataset):
                     history_ids, target_ids, config['bos_id'], config['eos_id'], 
                     start_speaker, config['speaker1_id'], config['speaker2_id'], 
                     config['max_len'], label=label
-            )  # (L), (L), (L)   
+                )  # (L), (L), (L)   
             
             assert len(input_id) == len(token_type_id) and len(token_type_id) == len(lm_label)
             
-            input_id, token_type_id, lm_label, attention_mask, mc_token_id =\
+            input_id, token_type_id, lm_label, attention_mask, mc_token_id = \
                 self.make_padding(input_id, token_type_id, lm_label, config['max_len'], config['pad_id'])
             
             input_group.append(input_id)
@@ -73,15 +73,22 @@ class CustomDataset(Dataset):
                 token_type_group = []
                 mc_token_group = []
                 lm_labels_group = []
+                
+        self.input_ids = torch.LongTensor(self.input_ids)  # (N, C, L)
+        self.attention_masks = torch.FloatTensor(self.attention_masks)  # (N, C, L)
+        self.token_type_ids = torch.LongTensor(self.token_type_ids)  # (N, C, L)
+        self.mc_token_ids = torch.LongTensor(self.mc_token_ids)  # (N, C)
+        self.lm_labels = torch.LongTensor(self.lm_labels)  # (N, C, L)
+        self.mc_labels = torch.LongTensor(self.mc_labels)  # (N)
     
     def __len__(self):
         return self.input_ids.shape[0]
     
     def __getitem__(self, idx):
-        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx],
+        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx], \
             self.mc_token_ids[idx], self.lm_labels[idx], self.mc_labels[idx]
 
-    def make_seqs(history_ids, target_ids, bos_id, eos_id, start_speaker, speaker1_id, speaker2_id, max_len, label=0):
+    def make_seqs(self, history_ids, target_ids, bos_id, eos_id, start_speaker, speaker1_id, speaker2_id, max_len, label=0):
         input_id = history_ids + [target_ids]
         cur_speaker = copy.deepcopy(start_speaker)
         total_len = 0
@@ -135,7 +142,7 @@ class CustomDataset(Dataset):
         
         return input_id, token_type_id, lm_label
     
-    def make_padding(input_id, token_type_id, lm_label, max_len, pad_id):
+    def make_padding(self, input_id, token_type_id, lm_label, max_len, pad_id):
         mc_token_id = len(input_id)-1
         left = max_len - len(input_id)
 

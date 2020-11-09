@@ -25,14 +25,14 @@ class Manager():
             self.config['device'] = torch.device('cpu')
         
         # Tokenizer & Vocab
-        print("Loading tokenizer & embedding...")
+        print("Loading the tokenizer...")
         self.tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
         special_tokens = {
             'bos_token': self.config['bos'],
             'eos_token': self.config['eos'],
             'pad_token': self.config['pad'],
-            'unk_token': config['unk'],
-            'additional_special_tokens': [config['speaker1'], config['speaker2']]
+            'unk_token': self.config['unk'],
+            'additional_special_tokens': [self.config['speaker1'], self.config['speaker2']]
         }
         num_new_tokens = self.tokenizer.add_special_tokens(special_tokens)
         vocab = self.tokenizer.get_vocab()
@@ -45,7 +45,7 @@ class Manager():
         
         # Load model    
         print("Loading the model...")
-        self.model = GPT2DoubleHeadsModel.from_pretrained('gpt2')
+        self.model = GPT2DoubleHeadsModel.from_pretrained('gpt2').to(self.config['device'])
         self.model.resize_token_embeddings(self.config['vocab_size'])
             
         if mode == 'train':            
@@ -74,9 +74,6 @@ class Manager():
             if args.mode == 'train':
                 self.optim.load_state_dict(checkpoint['optim_state_dict'])
                 self.best_loss = checkpoint['loss']
-        else:
-            print("Initializing the model...")
-            self.model.init_model()
               
         print("Setting finished.")
               
@@ -114,11 +111,11 @@ class Manager():
                 
                 lm_train_losses.append(lm_loss.item())
                 mc_train_losses.append(mc_loss.item())
-                total_train_losses.append(loss.itme())
+                total_train_losses.append(loss.item())
             
             lm_train_loss = np.mean(lm_train_losses)
             mc_train_loss = np.mean(mc_train_losses)
-            total_train_loss = np.mean(train_losses)
+            total_train_loss = np.mean(total_train_losses)
             print(f"Train loss: {total_train_loss} || LM loss: {lm_train_loss} || MC loss: {mc_train_loss}")
             
             lm_valid_loss, mc_valid_loss, valid_loss = self.validation()
@@ -167,7 +164,7 @@ class Manager():
                 
                 lm_valid_losses.append(lm_loss.item())
                 mc_valid_losses.append(mc_loss.item())
-                total_valid_losses.append(loss.itme())
+                total_valid_losses.append(loss.item())
               
             lm_valid_loss = np.mean(lm_valid_losses)
             mc_valid_loss = np.mean(mc_valid_losses)
