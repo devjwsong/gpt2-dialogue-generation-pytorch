@@ -82,10 +82,10 @@ class CustomDataset(Dataset):
                 self.token_type_ids.append(token_type_id)
                 self.lm_label.append(lm_label)
                 
-        self.input_ids = torch.LongTensor(self.input_ids)
-        self.attention_masks = torch.FloatTensor(self.attention_masks)
-        self.token_type_ids = torch.LongTensor(self.token_type_ids)
-        self.lm_labels = torch.LongTensor(self.lm_labels)
+        self.input_ids = torch.LongTensor(self.input_ids)  # (N, L)
+        self.attention_masks = torch.FloatTensor(self.attention_masks)  # (N, L)
+        self.token_type_ids = torch.LongTensor(self.token_type_ids)  # (N, L)
+        self.lm_labels = torch.LongTensor(self.lm_labels)  # (N, L)
     
     def __len__(self):
         return self.input_ids.shape[0]

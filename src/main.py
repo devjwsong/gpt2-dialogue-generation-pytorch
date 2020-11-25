@@ -87,6 +87,7 @@ class Manager():
             
             print(f"#################### Epoch: {epoch} ####################")
             train_losses = []
+            train_ppls = []
             for i, batch in enumerate(tqdm(self.train_loader)):
                 input_ids, attention_masks, token_type_ids, lm_labels = batch
                 input_ids, attention_masks, token_type_ids, lm_labels = \
@@ -107,11 +108,13 @@ class Manager():
                 self.optim.step()
                 
                 train_losses.append(loss.item())
+                train_ppls.append(torch.exp(loss).item())
             
             train_loss = np.mean(train_losses)
-            print(f"Train loss: {train_loss}")
+            train_ppl = np.mean(train_ppls)
+            print(f"Train loss: {train_loss} || Train perplexity: {train_ppl}")
             
-            valid_loss = self.validation()
+            valid_loss, valid_ppl = self.validation()
               
             if valid_loss < self.best_loss:
                 state_dict = {
@@ -125,7 +128,7 @@ class Manager():
                 self.best_loss = valid_loss
               
             print(f"Best valid loss: {self.best_loss}")
-            print(f"Valid loss: {valid_loss}")
+            print(f"Valid loss: {valid_loss} || Valid perplexity: {valid_ppl}")
               
         print("Training finished!")
     
@@ -134,6 +137,7 @@ class Manager():
         self.model.eval()
               
         valid_losses = []
+        valid_ppls = []
         with torch.no_grad():
             for i, batch in enumerate(tqdm(self.valid_loader)):
                 input_ids, attention_masks, token_type_ids, lm_labels = batch
@@ -151,10 +155,12 @@ class Manager():
                 loss, logits = outputs[0], outputs[1]
                 
                 valid_losses.append(loss.item())
+                valid_ppls.append(torch.exp(loss).item())
               
             valid_loss = np.mean(valid_losses)
+            valid_ppl = np.mean(valid_ppls)
               
-        return valid_loss
+        return valid_loss, valid_ppl
         
               
     def inference(self):
