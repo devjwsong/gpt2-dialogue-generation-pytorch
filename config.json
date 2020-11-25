@@ -1,7 +1,5 @@
 {
     "data_dir": "data",
-    "unmatched_dir": "unmatched",
-    "matched_dir": "matched",
     "train_name": "train",
     "valid_name": "validation",
     "train_frac": 0.85,
@@ -15,15 +13,13 @@
     "utter_split_symbol": "[END OF UTTERANCE]",
     "device": "cuda",
     "learning_rate": 5e-4,
-    "batch_size": 2,
+    "batch_size": 4,
     "num_epochs": 10,
     "max_len": 1024,
     "max_time": 5,
     "dropout": 0.1,
-    "num_distractors": 1,
     "nucleus_p": 0.9,
     "ckpt_dir": "saved_models",
     "end_command": "Abort!",
-    "lm_coef": 1.0,
-    "mc_coef": 1.0
+    "lm_coef": 1.0
 }

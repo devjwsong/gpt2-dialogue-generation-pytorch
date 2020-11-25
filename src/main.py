@@ -43,9 +43,11 @@ class Manager():
         self.config['speaker1_id'] = vocab[self.config['speaker1']]
         self.config['speaker2_id'] = vocab[self.config['speaker2']]
         
+        self.config['utter_len'] = self.config['max_len'] // self.config['max_time']
+        
         # Load model    
         print("Loading the model...")
-        self.model = GPT2DoubleHeadsModel.from_pretrained('gpt2').to(self.config['device'])
+        self.model = GPT2LMHeadModel.from_pretrained('gpt2').to(self.config['device'])
         self.model.resize_token_embeddings(self.config['vocab_size'])
             
         if mode == 'train':            
@@ -84,41 +86,32 @@ class Manager():
             self.model.train()
             
             print(f"#################### Epoch: {epoch} ####################")
-            lm_train_losses = []
-            mc_train_losses = []
-            total_train_losses = []
+            train_losses = []
             for i, batch in enumerate(tqdm(self.train_loader)):
-                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = batch
-                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = \
-                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), token_type_ids.to(self.config['device']), \
-                    mc_token_ids.to(self.config['device']), lm_labels.to(self.config['device']), mc_labels.to(self.config['device'])
+                input_ids, attention_masks, token_type_ids, lm_labels = batch
+                input_ids, attention_masks, token_type_ids, lm_labels = \
+                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), \
+                    token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
                 
                 outputs = self.model(
                     input_ids=input_ids,
                     attention_mask = attention_masks,
                     token_type_ids = token_type_ids,
-                    mc_token_ids = mc_token_ids,
-                    labels = lm_labels,
-                    mc_labels = mc_labels
+                    labels = lm_labels
                 )
                 
-                lm_loss, mc_loss = outputs[0], outputs[1]
-                loss = self.config['lm_coef'] * lm_loss + self.config['mc_coef']
+                loss, logits = outputs[0], outputs[1]
                 
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
                 
-                lm_train_losses.append(lm_loss.item())
-                mc_train_losses.append(mc_loss.item())
-                total_train_losses.append(loss.item())
+                train_losses.append(loss.item())
             
-            lm_train_loss = np.mean(lm_train_losses)
-            mc_train_loss = np.mean(mc_train_losses)
-            total_train_loss = np.mean(total_train_losses)
-            print(f"Train loss: {total_train_loss} || LM loss: {lm_train_loss} || MC loss: {mc_train_loss}")
+            train_loss = np.mean(train_losses)
+            print(f"Train loss: {train_loss}")
             
-            lm_valid_loss, mc_valid_loss, valid_loss = self.validation()
+            valid_loss = self.validation()
               
             if valid_loss < self.best_loss:
                 state_dict = {
@@ -140,37 +133,28 @@ class Manager():
         print("Validation processing...")
         self.model.eval()
               
-        lm_valid_losses = []
-        mc_valid_losses = []
-        total_valid_losses = []
+        valid_losses = []
         with torch.no_grad():
             for i, batch in enumerate(tqdm(self.valid_loader)):
-                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = batch
-                input_ids, attention_masks, token_type_ids, mc_token_ids, lm_labels, mc_labels = \
-                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), token_type_ids.to(self.config['device']), \
-                    mc_token_ids.to(self.config['device']), lm_labels.to(self.config['device']), mc_labels.to(self.config['device'])
+                input_ids, attention_masks, token_type_ids, lm_labels = batch
+                input_ids, attention_masks, token_type_ids, lm_labels = \
+                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), \
+                    token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
                 
                 outputs = self.model(
                     input_ids=input_ids,
                     attention_mask = attention_masks,
                     token_type_ids = token_type_ids,
-                    mc_token_ids = mc_token_ids,
-                    labels = lm_labels,
-                    mc_labels = mc_labels
+                    labels = lm_labels
                 )
                 
-                lm_loss, mc_loss = outputs[0], outputs[1]
-                loss = self.config['lm_coef'] * lm_loss + self.config['mc_coef']
+                loss, logits = outputs[0], outputs[1]
                 
-                lm_valid_losses.append(lm_loss.item())
-                mc_valid_losses.append(mc_loss.item())
-                total_valid_losses.append(loss.item())
+                valid_losses.append(loss.item())
               
-            lm_valid_loss = np.mean(lm_valid_losses)
-            mc_valid_loss = np.mean(mc_valid_losses)
-            total_valid_loss = np.mean(total_valid_losses)
+            valid_loss = np.mean(valid_losses)
               
-        return lm_valid_loss, mc_valid_loss, total_valid_loss
+        return valid_loss
         
               
     def inference(self):

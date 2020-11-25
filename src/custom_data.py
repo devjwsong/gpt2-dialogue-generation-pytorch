@@ -16,134 +16,84 @@ class CustomDataset(Dataset):
             data_name = config['valid_name']
         
         print(f"Loading {data_name}_id.txt...")
-        with open(f"{config['data_dir']}/{config['matched_dir']}/{data_name}.id", 'r') as f:
+        with open(f"{config['data_dir']}/{data_name}.id", 'r') as f:
             lines = f.readlines()
         
-        self.input_ids = []  # (N, C, L)
-        self.attention_masks = []  # (N, C, L)
-        self.token_type_ids = []  # (N, C, L)
-        self.mc_token_ids = []  # (N, C)
-        self.lm_labels = []  # (N, C, L)
-        self.mc_labels = []  # (N)
+        self.input_ids = []  # (N, L)
+        self.attention_masks = []  # (N, L)
+        self.token_type_ids = []  # (N, L)
+        self.labels = []  # (N, L)
         
-        print(f"Processing {data_name}_id.txt...")
-        input_group = []
-        mask_group = []
-        token_type_group = []
-        mc_token_group = []
-        lm_labels_group = []
-        for l, line in enumerate(tqdm(lines)):
-            comps = line.strip().split('\t')
-            start_speaker = int(comps[0])
-            histories = comps[1].split(config['utter_split_symbol'])
-            target = comps[2]
-            label = int(comps[3])
-            
-            history_ids = [[int(idx) for idx in history.split(' ')] for history in histories]
-            target_ids = [int(idx) for idx in target.split()]
-            
-            input_id, token_type_id, lm_label = \
-                self.make_seqs(
-                    history_ids, target_ids, config['bos_id'], config['eos_id'], 
-                    start_speaker, config['speaker1_id'], config['speaker2_id'], 
-                    config['max_len'], label=label
-                )  # (L), (L), (L)   
-            
-            assert len(input_id) == len(token_type_id) and len(token_type_id) == len(lm_label)
-            
-            input_id, token_type_id, lm_label, attention_mask, mc_token_id = \
-                self.make_padding(input_id, token_type_id, lm_label, config['max_len'], config['pad_id'])
-            
-            input_group.append(input_id)
-            mask_group.append(attention_mask)
-            token_type_group.append(token_type_id)
-            mc_token_group.append(mc_token_id)
-            lm_labels_group.append(lm_label)
-            
-            if label == 0:
-                self.input_ids.append(input_group)
-                self.attention_masks.append(mask_group)
-                self.token_type_ids.append(token_type_group)
-                self.mc_token_ids.append(mc_token_group)
-                self.lm_labels.append(lm_labels_group)
-                self.mc_labels.append(config['num_distractors'])
+        print(f"Processing {data_name}.id...")
+        dialogues = []
+        dialogue = []
+        cur_speaker = 1
+        for i, line in enumerate(tqdm(lines)):
+            if line.strip() == config['dialogue_split_line']:
+                dialogue = []
+                cur_speaker = 1
+            else:
+                if cur_speaker == 1:
+                    speaker_id = config['speaker1_id']
+                else:
+                    speaker_id = config['speaker2_id']
                 
-                input_group = []
-                mask_group = []
-                token_type_group = []
-                mc_token_group = []
-                lm_labels_group = []
+                token_ids = line.strip().split(' ')
+                token_ids = [speaker_id] + [int(idx) for idx in token_ids]                    
                 
-        self.input_ids = torch.LongTensor(self.input_ids)  # (N, C, L)
-        self.attention_masks = torch.FloatTensor(self.attention_masks)  # (N, C, L)
-        self.token_type_ids = torch.LongTensor(self.token_type_ids)  # (N, C, L)
-        self.mc_token_ids = torch.LongTensor(self.mc_token_ids)  # (N, C)
-        self.lm_labels = torch.LongTensor(self.lm_labels)  # (N, C, L)
-        self.mc_labels = torch.LongTensor(self.mc_labels)  # (N)
+                if len(utter_list) < config['max_time']:
+                    dialogue.append(token_ids)
+                else:
+                    dialogue = dialogue[1:] + [token_ids]
+                    
+                cur_speaker = (cur_speaker % 2) + 1
+                dialogues.append(copy.deepcopy(dialogue))
+        
+        for d, dialogue in enumerate(tqdm(dialogues)):
+            if len(dialogue) > 1:
+                dialogue[0] = [config['bos_id']] + dialogue[0]
+                dialogue[-1] = dialogue[-1] + [config['eos_id']]
+                
+                total_len = 0
+                for utter in dialogue:
+                    total_len += len(utter)
+                    
+                if total_len > config['max_len']:
+                    should_cut = True
+                else:
+                    should_cut = False
+                    
+                if should_cut:
+                    dialogue = [utter[:config['utter_len']] for utter in dialogue]
+                    dialogue[-1][-1] = config['eos_id']
+                    
+                token_type_id = [[utter[0]] * len(utter) if u != 0 else [utter[1]] * len(utter) for u, utter in enumerate(dialogue)]
+                lm_label = [[-100] * len(utter) if u != len(dialogue)-1 else utter for u, utter in enumerate(dialogue)]
+                input_id = list(chain.from_iterable(dialogue))
+                token_type_id = list(chain.from_iterable(token_type_id))
+                lm_label = list(chain.from_iterable(lm_label))
+                
+                assert len(input_id) == len(lm_label) and len(input_id) == len(token_type_id), "There is something wrong in dialogue process."
+                
+                input_id, token_type_id, lm_label, attention_mask = self.make_padding(input_id, token_type_id, lm_label, config['max_len'], config['pad_id'])
+                
+                self.input_ids.append(input_id)
+                self.attention_mask.append(attention_mask)
+                self.token_type_ids.append(token_type_id)
+                self.lm_label.append(lm_label)
+                
+        self.input_ids = torch.LongTensor(self.input_ids)
+        self.attention_masks = torch.FloatTensor(self.attention_masks)
+        self.token_type_ids = torch.LongTensor(self.token_type_ids)
+        self.lm_labels = torch.LongTensor(self.lm_labels)
     
     def __len__(self):
         return self.input_ids.shape[0]
     
     def __getitem__(self, idx):
-        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx], \
-            self.mc_token_ids[idx], self.lm_labels[idx], self.mc_labels[idx]
-
-    def make_seqs(self, history_ids, target_ids, bos_id, eos_id, start_speaker, speaker1_id, speaker2_id, max_len, label=0):
-        input_id = history_ids + [target_ids]
-        cur_speaker = copy.deepcopy(start_speaker)
-        total_len = 0
-        for i, token_ids in enumerate(input_id):
-            if cur_speaker == 1:
-                speaker_id = copy.deepcopy(speaker1_id)
-            elif cur_speaker == 2:
-                speaker_id = copy.deepcopy(speaker2_id)
-                
-            new_token_ids = [speaker_id] + token_ids
-            cur_speaker = (cur_speaker % 2) + 1
-            
-            if i == 0:
-                new_token_ids = [bos_id] + new_token_ids
-            elif i == len(input_id)-1:
-                new_token_ids = new_token_ids + [eos_id]
-                
-            input_id[i] = new_token_ids
-            total_len += len(new_token_ids)
-        
-        if total_len > max_len:
-            remove_idx = 0
-            remove_len = len(input_id[remove_idx])
-            while True:
-                if (total_len - remove_len) <= max_len-1:
-                    break
-                else:
-                    remove_idx += 1
-                    remove_len += len(input_id[remove_idx])
-                    
-            input_id = input_id[remove_idx+1:]
-            input_id[0] = [bos_id] + input_id[0]
-            
-        token_type_id = []
-        for i, utter in enumerate(input_id):
-            if i == 0:
-                speaker_id = utter[1]
-            else:
-                speaker_id = utter[0]
-                
-            token_type_id.append([speaker_id] * len(utter))
-        
-        if label == 0:  # golden reply
-            lm_label = [[-100] * len(utter) if i != len(input_id)-1 else utter for i, utter in enumerate(input_id)]
-        else:  # distractor
-            lm_label = [[-100] * len(utter) for utter in input_id]
-            
-        input_id = list(chain.from_iterable(input_id))
-        token_type_id = list(chain.from_iterable(token_type_id))
-        lm_label = list(chain.from_iterable(lm_label))
-        
-        return input_id, token_type_id, lm_label
+        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx], self.lm_labels[idx]
     
     def make_padding(self, input_id, token_type_id, lm_label, max_len, pad_id):
-        mc_token_id = len(input_id)-1
         left = max_len - len(input_id)
 
         attention_mask = [1] * len(input_id) + [0] * left
@@ -151,4 +101,4 @@ class CustomDataset(Dataset):
         token_type_id += [pad_id] * left
         lm_label += [-100] * left
 
-        return input_id, token_type_id, lm_label, attention_mask, mc_token_id
+        return input_id, token_type_id, lm_label, attention_mask
