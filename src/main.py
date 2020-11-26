@@ -87,7 +87,6 @@ class Manager():
             
             print(f"#################### Epoch: {epoch} ####################")
             train_losses = []
-            train_ppls = []
             for i, batch in enumerate(tqdm(self.train_loader)):
                 input_ids, attention_masks, token_type_ids, lm_labels = batch
                 input_ids, attention_masks, token_type_ids, lm_labels = \
@@ -108,11 +107,9 @@ class Manager():
                 self.optim.step()
                 
                 train_losses.append(loss.item())
-                train_ppls.append(torch.exp(loss).item())
             
             train_loss = np.mean(train_losses)
-            train_ppl = np.mean(train_ppls)
-            print(f"Train loss: {train_loss} || Train perplexity: {train_ppl}")
+            print(f"Train loss: {train_loss}")
             
             valid_loss, valid_ppl = self.validation()
               
