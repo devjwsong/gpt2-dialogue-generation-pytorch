@@ -41,7 +41,7 @@ class CustomDataset(Dataset):
                 token_ids = line.strip().split(' ')
                 token_ids = [speaker_id] + [int(idx) for idx in token_ids]                    
                 
-                if len(utter_list) < config['max_time']:
+                if len(dialogue) < config['max_time']:
                     dialogue.append(token_ids)
                 else:
                     dialogue = dialogue[1:] + [token_ids]
@@ -78,20 +78,20 @@ class CustomDataset(Dataset):
                 input_id, token_type_id, lm_label, attention_mask = self.make_padding(input_id, token_type_id, lm_label, config['max_len'], config['pad_id'])
                 
                 self.input_ids.append(input_id)
-                self.attention_mask.append(attention_mask)
+                self.attention_masks.append(attention_mask)
                 self.token_type_ids.append(token_type_id)
-                self.lm_label.append(lm_label)
+                self.labels.append(lm_label)
                 
         self.input_ids = torch.LongTensor(self.input_ids)  # (N, L)
         self.attention_masks = torch.FloatTensor(self.attention_masks)  # (N, L)
         self.token_type_ids = torch.LongTensor(self.token_type_ids)  # (N, L)
-        self.lm_labels = torch.LongTensor(self.lm_labels)  # (N, L)
+        self.labels = torch.LongTensor(self.labels)  # (N, L)
     
     def __len__(self):
         return self.input_ids.shape[0]
     
     def __getitem__(self, idx):
-        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx], self.lm_labels[idx]
+        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx], self.labels[idx]
     
     def make_padding(self, input_id, token_type_id, lm_label, max_len, pad_id):
         left = max_len - len(input_id)
