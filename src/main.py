@@ -43,7 +43,7 @@ class Manager():
         self.config['speaker1_id'] = vocab[self.config['speaker1']]
         self.config['speaker2_id'] = vocab[self.config['speaker2']]
         
-        self.config['utter_len'] = self.config['max_len'] // self.config['max_time']
+        self.config['utter_len'] = (self.config['max_len']-self.config['max_time']-2) // self.config['max_time']
         
         # Load model    
         print("Loading the model...")
@@ -175,6 +175,10 @@ class Manager():
                 if cur_speaker == 1:
                     cur_speaker_id = self.config['speaker1_id']
                     utter = input("You: ")
+                    
+                    if utter == self.config['end_command']:
+                        break
+                    
                     input_id = [cur_speaker_id] + self.tokenizer.encode(utter)
                     
                     if t == 0:
@@ -185,8 +189,16 @@ class Manager():
                     
                 token_type_id = [cur_speaker_id] * len(input_id)
                 
+                if input_id[-1] == self.config['eos_id']:
+                    input_id = input_id[:-1]
+                    token_type_id = token_type_id[:-1] 
+                
                 input_ids_list.append(input_id)
                 token_type_ids_list.append(token_type_id)
+                
+                if t >= self.config['max_time']:
+                    input_ids_list = input_ids_list[1:]
+                    token_type_ids = token_type_ids_list[1:]
                 
                 next_speaker = (cur_speaker % 2) + 1
                 if next_speaker == 1:
@@ -194,10 +206,7 @@ class Manager():
                 else:
                     next_speaker_id = self.config['speaker2_id']
                 
-                if input_ids_list[-1][-1] == self.config['eos_id']:
-                    input_ids_list[-1] = input_ids_list[-1][:-1]
-                
-                output_id = self.nucleus_sampling()
+                output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_speaker_id)
                 res = self.tokenizer.decode(output_id)
                 
                 print(f"Bot: {res}")
@@ -206,20 +215,43 @@ class Manager():
                 t += 1
                 
     def nucleus_sampling(self, input_ids_list, token_type_ids_list, next_speaker_id):
+        output_id = []
         res_id = [next_speaker_id]
         res_type_id = [next_speaker_id]
         for pos in range(self.config['utter_len']):
             input_ids = list(chain.from_iterable(input_ids_list)) + res_id
             token_type_ids = list(chain.from_iterable(token_type_ids_list)) + res_type_id
-
-            left = max_len - len(input_id)
-            attention_masks = [1] * len(input_ids) + [0] * left
+            
+            left = self.config['max_len'] - len(input_id)
             input_ids += [self.config['pad_id']] * left
             token_type_ids += [self.config['pad_id']] * left
 
+            assert len(input_ids) == len(token_type_ids), "There is something wrong in dialogue process."
+            
             input_ids = torch.LongTensor(input_ids).unsqueeze(0)  # (1, L)
-            attention_masks = torch.FloatTensor(attention_masks).unsqueeze(0)  # (1, L)
             token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0)  # (1, L)
+            
+            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[:, len(input_ids_list)+pos]  # (1, vocab_size)
+            output = F.softmax(output, dim=-1)  # (1, vocab_size)
+            
+            sorted_probs, sorted_idxs = torch.sort(output, descending=True)
+            cumsum_probs = torch.cumsum(sorted_probs, dim=-1)  # (1, vocab_size)
+            idx_remove = cumsum_probs > self.config['nucleus_p']
+            sorted_probs[idx_remove] = 1e-8
+            sorted_probs /= torch.sum(sorted_probs, dim=-1, keepdim=True)  # (1, vocab_size)
+            
+            # Random sampling
+            probs = torch.zeros(output.shape).to(self.config['device']).scatter_(-1, sorted_idxs, sorted_probs)  # (1, vocab_size)
+            idx = torch.multinomial(probs, 1).squeeze(-1).squeeze(0).item()
+            
+            output_id.append(idx)
+            if len(output_id) == self.config['utter_len'] or idx == self.config['eos_id']:
+                break
+            else:
+                res_id.append(idx)
+                res_type_id.append(next_speaker_id)
+                
+        return output_id
                     
 
 if __name__=='__main__':
