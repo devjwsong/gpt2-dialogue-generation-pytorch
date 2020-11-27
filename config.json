@@ -4,7 +4,6 @@
     "valid_name": "validation",
     "train_frac": 0.85,
     "pad": "<pad>",
-    "unk": "<unk>",
     "bos": "<bos>",
     "eos": "<eos>",
     "speaker1": "<speaker1>",
@@ -20,6 +19,5 @@
     "dropout": 0.1,
     "nucleus_p": 0.9,
     "ckpt_dir": "saved_models",
-    "end_command": "Abort!",
-    "lm_coef": 1.0
+    "end_command": "Abort!"
 }

@@ -3,6 +3,7 @@ from custom_data import *
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
+from itertools import chain
 
 import torch
 import os, sys
@@ -31,7 +32,6 @@ class Manager():
             'bos_token': self.config['bos'],
             'eos_token': self.config['eos'],
             'pad_token': self.config['pad'],
-            'unk_token': self.config['unk'],
             'additional_special_tokens': [self.config['speaker1'], self.config['speaker2']]
         }
         num_new_tokens = self.tokenizer.add_special_tokens(special_tokens)
@@ -87,15 +87,14 @@ class Manager():
             
             print(f"#################### Epoch: {epoch} ####################")
             train_losses = []
+            train_ppls = []
             for i, batch in enumerate(tqdm(self.train_loader)):
-                input_ids, attention_masks, token_type_ids, lm_labels = batch
-                input_ids, attention_masks, token_type_ids, lm_labels = \
-                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), \
-                    token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
+                input_ids, token_type_ids, lm_labels = batch
+                input_ids, token_type_ids, lm_labels = \
+                    input_ids.to(self.config['device']), token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
                 
                 outputs = self.model(
                     input_ids=input_ids,
-                    attention_mask = attention_masks,
                     token_type_ids = token_type_ids,
                     labels = lm_labels
                 )
@@ -107,9 +106,11 @@ class Manager():
                 self.optim.step()
                 
                 train_losses.append(loss.item())
+                train_ppls.append(torch.exp(loss).item())
             
             train_loss = np.mean(train_losses)
-            print(f"Train loss: {train_loss}")
+            train_ppl = np.mean(train_ppls)
+            print(f"Train loss: {train_loss} || Train perplexity: {train_ppl}")
             
             valid_loss, valid_ppl = self.validation()
               
@@ -137,14 +138,12 @@ class Manager():
         valid_ppls = []
         with torch.no_grad():
             for i, batch in enumerate(tqdm(self.valid_loader)):
-                input_ids, attention_masks, token_type_ids, lm_labels = batch
-                input_ids, attention_masks, token_type_ids, lm_labels = \
-                    input_ids.to(self.config['device']), attention_masks.to(self.config['device']), \
-                    token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
+                input_ids, token_type_ids, lm_labels = batch
+                input_ids, token_type_ids, lm_labels = \
+                    input_ids.to(self.config['device']), token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
                 
                 outputs = self.model(
                     input_ids=input_ids,
-                    attention_mask = attention_masks,
                     token_type_ids = token_type_ids,
                     labels = lm_labels
                 )
@@ -165,6 +164,63 @@ class Manager():
         print(f"If you want to quit the conversation, please type \"{self.config['end_command']}\".")
         self.model.eval()
         
+        with torch.no_grad():
+            cur_speaker = 1
+            input_ids_list = []
+            token_type_ids_list = []
+            t = 0
+            output_id = None
+            
+            while True:
+                if cur_speaker == 1:
+                    cur_speaker_id = self.config['speaker1_id']
+                    utter = input("You: ")
+                    input_id = [cur_speaker_id] + self.tokenizer.encode(utter)
+                    
+                    if t == 0:
+                        input_id = [self.config['bos_id']] + input_id
+                else:
+                    cur_speaker_id = self.config['speaker2_id']
+                    input_id = copy.deepcopy(output_id)
+                    
+                token_type_id = [cur_speaker_id] * len(input_id)
+                
+                input_ids_list.append(input_id)
+                token_type_ids_list.append(token_type_id)
+                
+                next_speaker = (cur_speaker % 2) + 1
+                if next_speaker == 1:
+                    next_speaker_id = self.config['speaker1_id']
+                else:
+                    next_speaker_id = self.config['speaker2_id']
+                
+                if input_ids_list[-1][-1] == self.config['eos_id']:
+                    input_ids_list[-1] = input_ids_list[-1][:-1]
+                
+                output_id = self.nucleus_sampling()
+                res = self.tokenizer.decode(output_id)
+                
+                print(f"Bot: {res}")
+                
+                cur_speaker = copy.deepcopy(next_speaker)
+                t += 1
+                
+    def nucleus_sampling(self, input_ids_list, token_type_ids_list, next_speaker_id):
+        res_id = [next_speaker_id]
+        res_type_id = [next_speaker_id]
+        for pos in range(self.config['utter_len']):
+            input_ids = list(chain.from_iterable(input_ids_list)) + res_id
+            token_type_ids = list(chain.from_iterable(token_type_ids_list)) + res_type_id
+
+            left = max_len - len(input_id)
+            attention_masks = [1] * len(input_ids) + [0] * left
+            input_ids += [self.config['pad_id']] * left
+            token_type_ids += [self.config['pad_id']] * left
+
+            input_ids = torch.LongTensor(input_ids).unsqueeze(0)  # (1, L)
+            attention_masks = torch.FloatTensor(attention_masks).unsqueeze(0)  # (1, L)
+            token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0)  # (1, L)
+                    
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()

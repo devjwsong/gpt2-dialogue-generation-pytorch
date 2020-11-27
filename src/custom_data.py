@@ -20,7 +20,6 @@ class CustomDataset(Dataset):
             lines = f.readlines()
         
         self.input_ids = []  # (N, L)
-        self.attention_masks = []  # (N, L)
         self.token_type_ids = []  # (N, L)
         self.labels = []  # (N, L)
         
@@ -75,15 +74,13 @@ class CustomDataset(Dataset):
                 
                 assert len(input_id) == len(lm_label) and len(input_id) == len(token_type_id), "There is something wrong in dialogue process."
                 
-                input_id, token_type_id, lm_label, attention_mask = self.make_padding(input_id, token_type_id, lm_label, config['max_len'], config['pad_id'])
+                input_id, token_type_id, lm_label = self.make_padding(input_id, token_type_id, lm_label, config['pad_id'], config['max_len'])
                 
                 self.input_ids.append(input_id)
-                self.attention_masks.append(attention_mask)
                 self.token_type_ids.append(token_type_id)
                 self.labels.append(lm_label)
                 
         self.input_ids = torch.LongTensor(self.input_ids)  # (N, L)
-        self.attention_masks = torch.FloatTensor(self.attention_masks)  # (N, L)
         self.token_type_ids = torch.LongTensor(self.token_type_ids)  # (N, L)
         self.labels = torch.LongTensor(self.labels)  # (N, L)
     
@@ -91,14 +88,13 @@ class CustomDataset(Dataset):
         return self.input_ids.shape[0]
     
     def __getitem__(self, idx):
-        return self.input_ids[idx], self.attention_masks[idx], self.token_type_ids[idx], self.labels[idx]
+        return self.input_ids[idx], self.token_type_ids[idx], self.labels[idx]
     
-    def make_padding(self, input_id, token_type_id, lm_label, max_len, pad_id):
+    def make_padding(self, input_id, token_type_id, lm_label, pad_id, max_len):
         left = max_len - len(input_id)
-
-        attention_mask = [1] * len(input_id) + [0] * left
+        
         input_id += [pad_id] * left
         token_type_id += [pad_id] * left
         lm_label += [-100] * left
-
-        return input_id, token_type_id, lm_label, attention_mask
+        
+        return input_id, token_type_id, lm_label
