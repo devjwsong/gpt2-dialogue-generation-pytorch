@@ -58,11 +58,6 @@ class CustomDataset(Dataset):
                     total_len += len(utter)
                     
                 if total_len > config['max_len']:
-                    should_cut = True
-                else:
-                    should_cut = False
-                    
-                if should_cut:
                     dialogue = [utter[:config['utter_len']] for utter in dialogue]
                     dialogue[-1][-1] = config['eos_id']
                     
