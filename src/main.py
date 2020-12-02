@@ -231,7 +231,7 @@ class Manager():
             input_ids = torch.LongTensor(input_ids).unsqueeze(0)  # (1, L)
             token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0)  # (1, L)
             
-            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[:, len(input_ids_list)+pos]  # (1, vocab_size)
+            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[0][:, len(input_ids_list)+pos]  # (1, vocab_size)
             output = F.softmax(output, dim=-1)  # (1, vocab_size)
             
             sorted_probs, sorted_idxs = torch.sort(output, descending=True)
