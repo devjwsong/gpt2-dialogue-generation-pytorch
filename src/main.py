@@ -177,6 +177,7 @@ class Manager():
                     utter = input("You: ")
                     
                     if utter == self.config['end_command']:
+                        print("Bot: Good bye.")
                         break
                     
                     input_id = [cur_speaker_id] + self.tokenizer.encode(utter)
@@ -198,7 +199,7 @@ class Manager():
                 
                 if t >= self.config['max_time']:
                     input_ids_list = input_ids_list[1:]
-                    token_type_ids = token_type_ids_list[1:]
+                    token_type_ids_list = token_type_ids_list[1:]
                 
                 next_speaker = (cur_speaker % 2) + 1
                 if next_speaker == 1:
@@ -206,10 +207,11 @@ class Manager():
                 else:
                     next_speaker_id = self.config['speaker2_id']
                 
-                output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_speaker_id)
-                res = self.tokenizer.decode(output_id)
-                
-                print(f"Bot: {res}")
+                if cur_speaker == 1:
+                    output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_speaker_id)
+                    res = self.tokenizer.decode(output_id)
+
+                    print(f"Bot: {res}")
                 
                 cur_speaker = copy.deepcopy(next_speaker)
                 t += 1
@@ -221,17 +223,18 @@ class Manager():
         for pos in range(self.config['utter_len']):
             input_ids = list(chain.from_iterable(input_ids_list)) + res_id
             token_type_ids = list(chain.from_iterable(token_type_ids_list)) + res_type_id
+            input_len = len(input_ids)
             
-            left = self.config['max_len'] - len(input_id)
+            left = self.config['max_len'] - len(input_ids)
             input_ids += [self.config['pad_id']] * left
             token_type_ids += [self.config['pad_id']] * left
 
             assert len(input_ids) == len(token_type_ids), "There is something wrong in dialogue process."
             
-            input_ids = torch.LongTensor(input_ids).unsqueeze(0)  # (1, L)
-            token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0)  # (1, L)
+            input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.config['device'])  # (1, L)
+            token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0).to(self.config['device'])  # (1, L)
             
-            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[0][:, len(input_ids_list)+pos]  # (1, vocab_size)
+            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[0][:, input_len-1]  # (1, vocab_size)
             output = F.softmax(output, dim=-1)  # (1, vocab_size)
             
             sorted_probs, sorted_idxs = torch.sort(output, descending=True)
@@ -244,10 +247,10 @@ class Manager():
             probs = torch.zeros(output.shape).to(self.config['device']).scatter_(-1, sorted_idxs, sorted_probs)  # (1, vocab_size)
             idx = torch.multinomial(probs, 1).squeeze(-1).squeeze(0).item()
             
-            output_id.append(idx)
             if len(output_id) == self.config['utter_len'] or idx == self.config['eos_id']:
                 break
             else:
+                output_id.append(idx)
                 res_id.append(idx)
                 res_type_id.append(next_speaker_id)
                 
