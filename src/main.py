@@ -66,7 +66,6 @@ class Manager():
             if not os.path.exists(self.config['ckpt_dir']):
                 os.mkdir(self.config['ckpt_dir'])
         
-        set_default = False
         if ckpt_name is not None:
             if os.path.exists(f"{self.config['ckpt_dir']}/{ckpt_name}.tar"):
                 print("Loading the trained checkpoint...")
@@ -81,15 +80,12 @@ class Manager():
             else:
                 assert mode == 'train', "Please check if the checkpoint name exists."
                 
-                print(f"The checkpoint named '{ckpt_name}' does not exist. Training starts from the beginning.")
-                set_default = True
+                print(f"The checkpoint named '{ckpt_name}' does not exist. This becomes the best checkpoint name from now on.")
+                self.ckpt_name = ckpt_name
         else:
             print("You did not specify the checkpoint name.")
-            set_default = True
-            
-        if set_default:
             print(f"The default name '{self.config['ckpt_name']}' is set.")
-            self.ckpt_name = self.config['ckpt_name']            
+            self.ckpt_name = self.config['ckpt_name']      
               
         print("Setting finished.")
               
@@ -273,7 +269,7 @@ class Manager():
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config_path', required=True, help="The path to configuration file.")
+    parser.add_argument('--config_path', required=True, default='config.json', help="The path to configuration file.")
     parser.add_argument('--mode', required=True, help="Train or inference?")
     parser.add_argument('--ckpt_name', required=False, help="Best checkpoint file.")
               
