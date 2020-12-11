@@ -49,7 +49,7 @@ class CustomDataset(Dataset):
                 dialogues.append(copy.deepcopy(dialogue))
         
         for d, dialogue in enumerate(tqdm(dialogues)):
-            if len(dialogue) > 1:
+            if len(dialogue) > 1 and dialogue[-1][0] == config['speaker2_id']:
                 dialogue[0] = [config['bos_id']] + dialogue[0]
                 dialogue[-1] = dialogue[-1] + [config['eos_id']]
                 

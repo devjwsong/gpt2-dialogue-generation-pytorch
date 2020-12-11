@@ -84,7 +84,7 @@ But they are just for checking how the trimmed utterances look like, so they are
 2. Download & Preprocess all datasets. (If you want to use your own datasets, skip this step.)
 
    ```shell
-   python src/data_process.py --config_path=PATH_TO_CONFIGURATION_FILE
+   python src/data_load.py --config_path=PATH_TO_CONFIGURATION_FILE
    ```
 
    - `--config_path`: This indicates the path to the configuration file. (default: `"config.json"`)
