@@ -109,7 +109,7 @@ But they are just for checking how the trimmed utterances look like, so they are
    ```
 
    - `--mode`: You have to specify the mode among two options, 'train' or 'inference'.
-   - `--ckpt_name`: This specifies the checkpoint file name. If this argument is not specified or the checkpoint name cannot be found in `{saved_models}` directory, then the model would be trained from the beginning and the default checkpoint name becomes `{ckpt_name}` after the evluation. If you specify the name which is already the name of existing trained model, then the training will be continued starting with that specified checkpoint. (default: `None`)
+   - `--ckpt_name`: This specifies the checkpoint file name. If this argument is not specified or the checkpoint name cannot be found in `{ckpt_dir}` directory, then the model would be trained from the beginning and the default checkpoint name becomes `{ckpt_name}` after the evluation. If you specify the name which is already the name of existing trained model, then the training will be continued starting with that specified checkpoint. (default: `None`)
 
    <br/>
 
