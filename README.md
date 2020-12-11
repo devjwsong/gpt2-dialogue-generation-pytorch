@@ -34,6 +34,7 @@ The description of each variable is as follows. (Those not introduced in below t
 | `max_time`            | `Number`(`int`)   | The maximum length of the dialogue history to be attended.   | `5`                   |
 | `nucleus_p`           | `Number`(`float`) | The ratio of the probability mass for top-$p$ sampling(nucleus sampling). | `0.9`                 |
 | `ckpt_dir`            | `String`          | The path for saved checkpoints.                              | `"saved_models"`      |
+| `ckpt_name`            | `String`          | The default name for the trained model. (without extension)                              | `"best_ckpt"`      |
 | `end_command`         | `String`          | The command to stop the conversation when inferencing.       | `"Abort!"`            |
 
 <br/>
@@ -108,9 +109,9 @@ But they are just for checking how the trimmed utterances look like, so they are
    ```
 
    - `--mode`: You have to specify the mode among two options, 'train' or 'inference'.
-   - `--ckpt_name`: This specify the checkpoint file name. This would be the name of trained checkpoint and you can continue your training with this model in the case of resuming training. If you want to conduct training from the beginning, this parameter should be omitted. When testing, this would be the name of the checkpoint you want to test. (default: `None`)
+   - `--ckpt_name`: This specifies the checkpoint file name. If this argument is not specified or the checkpoint name cannot be found in `{saved_models}` directory, then the model would be trained from the beginning and the default checkpoint name becomes `{ckpt_name}` after the evluation. If you specify the name which is already the name of existing trained model, then the training will be continued starting with that specified checkpoint. (default: `None`)
 
-<br/>
+   <br/>
 
 4. Run below command to conduct an inference with the trained model.
 
@@ -118,7 +119,9 @@ But they are just for checking how the trimmed utterances look like, so they are
    python src/main.py --config_path=PATH_TO_CONFIGURATION_FILE --mode='inference' --ckpt_name=CHECKPOINT_NAME
    ```
 
-   <br/>
+   - `--ckpt_name`: Unlike the case in the training mode, this must specify the name of trained checkpoint which exists.
+
+<br/>
 
 ---
 

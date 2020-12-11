@@ -63,19 +63,33 @@ class Manager():
             self.train_loader = DataLoader(train_set, shuffle=True, batch_size=self.config['batch_size'])
             self.valid_loader = DataLoader(valid_set, shuffle=True, batch_size=self.config['batch_size'])
             
-        if not os.path.exists(self.config['ckpt_dir']):
-            os.mkdir(self.config['ckpt_dir'])
+            if not os.path.exists(self.config['ckpt_dir']):
+                os.mkdir(self.config['ckpt_dir'])
         
+        set_default = False
         if ckpt_name is not None:
-            assert os.path.exists(f"{self.config['ckpt_dir']}/{ckpt_name}"), f"There is no checkpoint named {ckpt_name}."
-
-            print("Loading checkpoint...")
-            checkpoint = torch.load(f"{self.config['ckpt_dir']}/{ckpt_name}")
-            self.model.load_state_dict(checkpoint['model_state_dict'])
+            if os.path.exists(f"{self.config['ckpt_dir']}/{ckpt_name}.tar"):
+                print("Loading the trained checkpoint...")
+                checkpoint = torch.load(f"{self.config['ckpt_dir']}/{ckpt_name}.tar")
+                self.model.load_state_dict(checkpoint['model_state_dict'])
+                
+                if mode == 'train':
+                    print("The training restarts with the specifed checkpoint.")
+                    self.optim.load_state_dict(checkpoint['optim_state_dict'])
+                    self.best_loss = checkpoint['loss']
+                    self.ckpt_name = ckpt_name
+            else:
+                assert mode == 'train', "Please check if the checkpoint name exists."
+                
+                print(f"The checkpoint named '{ckpt_name}' does not exist. Training starts from the beginning.")
+                set_default = True
+        else:
+            print("You did not specify the checkpoint name.")
+            set_default = True
             
-            if args.mode == 'train':
-                self.optim.load_state_dict(checkpoint['optim_state_dict'])
-                self.best_loss = checkpoint['loss']
+        if set_default:
+            print(f"The default name '{self.config['ckpt_name']}' is set.")
+            self.ckpt_name = self.config['ckpt_name']            
               
         print("Setting finished.")
               
@@ -121,7 +135,7 @@ class Manager():
                     'loss': self.best_loss,
                 }
               
-                torch.save(state_dict, f"{self.config['ckpt_dir']}/best_ckpt.tar")
+                torch.save(state_dict, f"{self.config['ckpt_dir']}/{self.ckpt_name}.tar")
                 print(f"***** Current best checkpoint is saved. *****")
                 self.best_loss = valid_loss
               
@@ -268,11 +282,8 @@ if __name__=='__main__':
     assert args.mode == 'train' or args.mode=='inference', print("Please specify a correct mode name, 'train' or 'inference'.")
               
     if args.mode == 'train':
-        if args.ckpt_name is not None:
-            manager = Manager(args.config_path, args.mode, ckpt_name=args.ckpt_name)
-        else:
-            manager = Manager(args.config_path, args.mode)
-              
+        manager = Manager(args.config_path, args.mode, ckpt_name=args.ckpt_name)
+
         manager.train()
         
     elif args.mode == 'inference':
