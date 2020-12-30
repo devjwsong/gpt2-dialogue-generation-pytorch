@@ -56,7 +56,7 @@ There are 4 types of the default datasets as follows.
 
 <br/>
 
-You can use whatever data you want, but make sure that you should make `{data_dir}/{train_name}_id.txt` and `{data_dir}/{valid_name}_id.txt` 
+You can use whatever data you want, but make sure that you should make `{data_dir}/{train_name}.id` and `{data_dir}/{valid_name}.id` 
 
 consisting of token ids and dialogue split lines.
 
@@ -95,9 +95,9 @@ But they are just for checking how the trimmed utterances look like, so they are
    In default setting, the structure of whole data directory should be like below.
 
    - `data`
-     - `train_id.txt`
+     - `train.id`
      - `train.txt`
-     - `validation_id.txt`
+     - `validation.id`
      - `validation.txt`
 
    <br/>
