@@ -7,7 +7,7 @@ import os
 import json
 
 
-dataset_list = ['daily_dialog', 'empathetic_dialogues', 'persona_chat', 'blended_skill_talk']
+dataset_list = ['persona_chat']
 
 
 def merge_data(tokenizer, train_frac):
