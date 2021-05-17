@@ -11,7 +11,7 @@
     "dialogue_split_line": "[END OF DIALOGUE]",
     "device": "cuda",
     "learning_rate": 5e-4,
-    "batch_size": 4,
+    "batch_size": 2,
     "num_epochs": 10,
     "max_len": 1024,
     "max_time": 5,
