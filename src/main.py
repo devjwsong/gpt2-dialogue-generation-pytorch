@@ -15,7 +15,11 @@ import json
 
 
 class Manager():
-    def __init__(self, config_path, mode, ckpt_name=None):
+    def __init__(
+        self, config_path,
+        mode, ckpt_name=None,
+        model_path='sberbank-ai/rugpt3small_based_on_gpt2'):
+
         print("Setting the configurations...")
         with open(config_path, 'r') as f:
             self.config = json.load(f)
@@ -27,7 +31,7 @@ class Manager():
         
         # Tokenizer & Vocab
         print("Loading the tokenizer...")
-        self.tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+        self.tokenizer = GPT2Tokenizer.from_pretrained(model_path)
         special_tokens = {
             'bos_token': self.config['bos'],
             'eos_token': self.config['eos'],
@@ -47,7 +51,7 @@ class Manager():
         
         # Load model    
         print("Loading the model...")
-        self.model = GPT2LMHeadModel.from_pretrained('gpt2').to(self.config['device'])
+        self.model = GPT2LMHeadModel.from_pretrained(model_path).to(self.config['device'])
         self.model.resize_token_embeddings(self.config['vocab_size'])
             
         if mode == 'train':            
