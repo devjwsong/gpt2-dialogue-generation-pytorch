@@ -117,10 +117,25 @@ class Manager():
                 
                 train_losses.append(loss.item())
                 train_ppls.append(torch.exp(loss).item())
+
+                if i % self.config['train_display_freq'] == 0:
+                    train_loss = np.mean(train_losses)
+                    train_ppl = np.mean(train_ppls)
+                    print(f" Train loss: {train_loss} || Train perplexity: {train_ppl}")
+                    
+                    train_loss_cutoff = self.config['train_loss_cutoff']
+                    if train_loss < train_loss_cutoff:
+                        print('Reached cutoff loss', train_loss_cutoff)
+                        break
+
+                train_batch_count = self.config['train_batch_count']
+                if i == train_batch_count:
+                    print('Reached training batch count', train_batch_count)
+                    break
             
             train_loss = np.mean(train_losses)
             train_ppl = np.mean(train_ppls)
-            print(f"Train loss: {train_loss} || Train perplexity: {train_ppl}")
+            print(f" Train loss: {train_loss} || Train perplexity: {train_ppl}")
             
             valid_loss, valid_ppl = self.validation()
               
@@ -146,6 +161,7 @@ class Manager():
               
         valid_losses = []
         valid_ppls = []
+        valid_batch_count = self.config['valid_batch_count']
         with torch.no_grad():
             for i, batch in enumerate(tqdm(self.valid_loader)):
                 input_ids, token_type_ids, lm_labels = batch
@@ -162,6 +178,10 @@ class Manager():
                 
                 valid_losses.append(loss.item())
                 valid_ppls.append(torch.exp(loss).item())
+
+                if valid_batch_count != None and i == valid_batch_count:
+                    print('Reached validation batch count', valid_batch_count)
+                    break
               
             valid_loss = np.mean(valid_losses)
             valid_ppl = np.mean(valid_ppls)
@@ -272,7 +292,7 @@ if __name__=='__main__':
     parser.add_argument('--config_path', required=True, default='config.json', help="The path to configuration file.")
     parser.add_argument('--mode', required=True, help="Train or inference?")
     parser.add_argument('--ckpt_name', required=False, help="Best checkpoint file.")
-              
+
     args = parser.parse_args()
     
     assert args.mode == 'train' or args.mode=='inference', print("Please specify a correct mode name, 'train' or 'inference'.")
