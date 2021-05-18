@@ -18,5 +18,10 @@
     "nucleus_p": 0.9,
     "ckpt_dir": "saved_models",
     "ckpt_name": "best_ckpt",
-    "end_command": "Abort!"
+    "end_command": "Abort!",
+
+    "train_display_freq": 20,
+    "train_loss_cutoff": 10,
+    "train_batch_count": 100,
+    "valid_batch_count": 20
 }
