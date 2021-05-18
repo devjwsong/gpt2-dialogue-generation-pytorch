@@ -18,7 +18,8 @@ class Manager():
     def __init__(
         self, config_path,
         mode, ckpt_name=None,
-        model_path='sberbank-ai/rugpt3small_based_on_gpt2'):
+        model_path='sberbank-ai/rugpt3small_based_on_gpt2'
+        ):
 
         print("Setting the configurations...")
         with open(config_path, 'r') as f:
@@ -95,68 +96,68 @@ class Manager():
               
     def train(self):
         print("Training starts.")
-              
-        for epoch in range(1, self.config['num_epochs']+1):
-            self.model.train()
-            
-            print(f"#################### Epoch: {epoch} ####################")
-            train_losses = []
-            train_ppls = []
-            for i, batch in enumerate(tqdm(self.train_loader)):
-                input_ids, token_type_ids, lm_labels = batch
-                input_ids, token_type_ids, lm_labels = \
-                    input_ids.to(self.config['device']), token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
+        
+        try:
+            for epoch in range(1, self.config['num_epochs']+1):
+                self.model.train()
                 
-                outputs = self.model(
-                    input_ids=input_ids,
-                    token_type_ids = token_type_ids,
-                    labels = lm_labels
-                )
-                
-                loss, logits = outputs[0], outputs[1]
-                
-                self.optim.zero_grad()
-                loss.backward()
-                self.optim.step()
-                
-                train_losses.append(loss.item())
-                train_ppls.append(torch.exp(loss).item())
-
-                if i % self.config['train_display_freq'] == 0:
-                    train_loss = np.mean(train_losses)
-                    train_ppl = np.mean(train_ppls)
-                    print(f" Train loss: {train_loss} || Train perplexity: {train_ppl}")
+                print(f"#################### Epoch: {epoch} ####################")
+                train_losses = []
+                train_ppls = []
+                for i, batch in enumerate(tqdm(self.train_loader)):
+                    input_ids, token_type_ids, lm_labels = batch
+                    input_ids, token_type_ids, lm_labels = \
+                        input_ids.to(self.config['device']), token_type_ids.to(self.config['device']), lm_labels.to(self.config['device'])
                     
-                    train_loss_cutoff = self.config['train_loss_cutoff']
-                    if train_loss < train_loss_cutoff:
-                        print('Reached cutoff loss', train_loss_cutoff)
-                        break
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        token_type_ids = token_type_ids,
+                        labels = lm_labels
+                    )
+                    
+                    loss, logits = outputs[0], outputs[1]
+                    
+                    self.optim.zero_grad()
+                    loss.backward()
+                    self.optim.step()
+                    
+                    train_losses.append(loss.item())
+                    train_ppls.append(torch.exp(loss).item())
 
-                train_batch_count = self.config['train_batch_count']
-                if i == train_batch_count:
-                    print('Reached training batch count', train_batch_count)
-                    break
+                    if i % self.config['train_display_freq'] == 0:
+                        train_loss = np.mean(train_losses)
+                        train_ppl = np.mean(train_ppls)
+                        print(f" Train loss: {train_loss} || Train perplexity: {train_ppl}")
+                        
+                        train_loss_cutoff = self.config['train_loss_cutoff']
+                        if train_loss < train_loss_cutoff:
+                            print('Reached cutoff loss', train_loss_cutoff)
+                            break
+
+                    train_batch_count = self.config['train_batch_count']
+                    if i == train_batch_count:
+                        print('Reached training batch count', train_batch_count)
+                        break
+                
+                train_loss = np.mean(train_losses)
+                train_ppl = np.mean(train_ppls)
+                print(f" Train loss: {train_loss} || Train perplexity: {train_ppl}")
+                
+                valid_loss, valid_ppl = self.validation()
+                
+                if valid_loss < self.best_loss:
+                    self.best_loss = valid_loss
+                    self.save_model(self.model, self.optim, self.best_loss)
+                
+                print(f"Best valid loss: {self.best_loss}")
+                print(f"Valid loss: {valid_loss} || Valid perplexity: {valid_ppl}")
+        except KeyboardInterrupt:
+            print("Training interrupted")
+            try:
+                if valid_loss < self.best_loss:
+                    self.best_loss = valid_loss
+                    self.save_model(self.model, self.optim, self.best_loss)
             
-            train_loss = np.mean(train_losses)
-            train_ppl = np.mean(train_ppls)
-            print(f" Train loss: {train_loss} || Train perplexity: {train_ppl}")
-            
-            valid_loss, valid_ppl = self.validation()
-              
-            if valid_loss < self.best_loss:
-                self.best_loss = valid_loss
-                state_dict = {
-                    'model_state_dict': self.model.state_dict(),
-                    'optim_state_dict': self.optim.state_dict(),
-                    'loss': self.best_loss,
-                }
-              
-                torch.save(state_dict, f"{self.config['ckpt_dir']}/{self.ckpt_name}.tar")
-                print(f"***** Current best checkpoint is saved. *****")
-              
-            print(f"Best valid loss: {self.best_loss}")
-            print(f"Valid loss: {valid_loss} || Valid perplexity: {valid_ppl}")
-              
         print("Training finished!")
     
     def validation(self):
@@ -289,7 +290,16 @@ class Manager():
                 res_type_id.append(next_speaker_id)
                 
         return output_id
-                    
+
+    def save_model(self, model, optim, best_loss):
+        state_dict = {
+            'model_state_dict': model.state_dict(),
+            'optim_state_dict': optim.state_dict(),
+            'loss': best_loss,
+        }
+
+        torch.save(state_dict, f"{self.config['ckpt_dir']}/{self.ckpt_name}.tar")
+        print(f"***** Current best checkpoint is saved. *****")   
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
