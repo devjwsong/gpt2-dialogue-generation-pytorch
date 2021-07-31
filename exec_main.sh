@@ -1,0 +1,23 @@
+python src/main.py \
+    --seed=0 \
+    --mode="inference" \
+    --data_dir="data" \
+    --train_prefix="train" \
+    --valid_prefix="valid" \
+    --model_type="gpt2" \
+    --pad_token="<pad>" \
+    --bos_token="<bos>" \
+    --eos_token="<eos>" \
+    --sp1_token="<sp1>" \
+    --sp2_token="<sp2>" \
+    --gpu="0" \
+    --lr=5e-4 \
+    --batch_size=8 \
+    --num_workers=4 \
+    --num_epochs=10 \
+    --max_len=1024 \
+    --max_turns=5 \
+    --top_p=0.9 \
+    --ckpt_dir="saved_models" \
+    --end_command="Abort!" \
+    --ckpt_name="best_ckpt_epoch=10_valid_loss=5.2573"

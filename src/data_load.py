@@ -4,7 +4,6 @@ from data_process import *
 
 import argparse
 import os
-import json
 import pickle
 
 

@@ -4,92 +4,85 @@ from itertools import chain
 
 import torch
 import copy
+import pickle
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data_type, config):
-        assert data_type == 'train' or data_type == 'valid', "Data type incorrect. It should be 'train' or 'valid'."
+    def __init__(self, prefix, args):
+        assert prefix == args.train_prefix or prefix == args.valid_prefix
         
-        if data_type == 'train':
-            data_name = config['train_name']
-        elif data_type == 'valid':
-            data_name = config['valid_name']
-        
-        print(f"Loading {data_name}_id.txt...")
-        with open(f"{config['data_dir']}/{data_name}.id", 'r') as f:
-            lines = f.readlines()
+        print(f"Loading {prefix}_id.txt...")
+        with open(f"{args.data_dir}/{prefix}_ids.pickle", 'rb') as f:
+            dialogues_ids = pickle.load(f)
         
         self.input_ids = []  # (N, L)
         self.token_type_ids = []  # (N, L)
         self.labels = []  # (N, L)
         
-        print(f"Processing {data_name}.id...")
-        dialogues = []
-        dialogue = []
-        cur_speaker = 1
-        for i, line in enumerate(tqdm(lines)):
-            if line.strip() == config['dialogue_split_line']:
-                dialogue = []
-                cur_speaker = 1
-            else:
-                if cur_speaker == 1:
-                    speaker_id = config['speaker1_id']
+        print(f"Processing {prefix} data...")
+        total_seq_ids = []
+        for d, dialogue_ids in enumerate(tqdm(dialogues_ids)):
+            cur_sp = 1
+            hists = []
+            for t, token_ids in enumerate(dialogue_ids):
+                if cur_sp == 1:
+                    sp_id = args.sp1_id
                 else:
-                    speaker_id = config['speaker2_id']
-                
-                token_ids = line.strip().split(' ')
-                token_ids = [speaker_id] + [int(idx) for idx in token_ids]                    
-                
-                if len(dialogue) < config['max_time']:
-                    dialogue.append(token_ids)
-                else:
-                    dialogue = dialogue[1:] + [token_ids]
+                    sp_id = args.sp2_id
                     
-                cur_speaker = (cur_speaker % 2) + 1
-                dialogues.append(copy.deepcopy(dialogue))
+                if len(hists) < args.max_turns:
+                    hists.append([sp_id] + token_ids)
+                else:
+                    hists = hists[1:] + [[sp_id] + token_ids]
+                    
+                cur_sp = (cur_sp % 2) + 1
+                total_seq_ids.append(copy.deepcopy(hists))
         
-        for d, dialogue in enumerate(tqdm(dialogues)):
-            if len(dialogue) > 1 and dialogue[-1][0] == config['speaker2_id']:
-                dialogue[0] = [config['bos_id']] + dialogue[0]
-                dialogue[-1] = dialogue[-1] + [config['eos_id']]
+        for s, seq_ids in enumerate(tqdm(total_seq_ids)):
+            if len(seq_ids) > 1 and seq_ids[-1][0] == args.sp2_id:
+                seq_ids[0] = [args.bos_id] + seq_ids[0]
+                seq_ids[-1] = seq_ids[-1] + [args.eos_id]
                 
                 total_len = 0
-                for utter in dialogue:
-                    total_len += len(utter)
+                for token_ids in seq_ids:
+                    total_len += len(token_ids)
                     
-                if total_len > config['max_len']:
-                    dialogue = [utter[:config['utter_len']] for utter in dialogue]
-                    dialogue[-1][-1] = config['eos_id']
+                if total_len > args.max_len:
+                    seq_ids = [token_ids[:args.utter_len] for token_ids in seq_ids]
+                    seq_ids[-1][-1] = args.eos_id
                     
-                token_type_id = [[utter[0]] * len(utter) if u != 0 else [utter[1]] * len(utter) for u, utter in enumerate(dialogue)]
-                lm_label = [[-100] * len(utter) if u != len(dialogue)-1 else utter for u, utter in enumerate(dialogue)]
-                input_id = list(chain.from_iterable(dialogue))
+                token_type_id = [[token_ids[0]] * len(token_ids) if t != 0 else [token_ids[1]] * len(token_ids) for t, token_ids in enumerate(seq_ids)]
+                lm_label = [[-100] * len(token_ids) if t != len(seq_ids)-1 else token_ids for t, token_ids in enumerate(seq_ids)]
+                input_id = list(chain.from_iterable(seq_ids))
                 token_type_id = list(chain.from_iterable(token_type_id))
                 lm_label = list(chain.from_iterable(lm_label))
                 
-                assert len(input_id) == len(lm_label) and len(input_id) == len(token_type_id), "There is something wrong in dialogue process."
-                
-                input_id, token_type_id, lm_label = self.make_padding(input_id, token_type_id, lm_label, config['pad_id'], config['max_len'])
+                assert len(input_id) == len(lm_label) and len(input_id) == len(token_type_id)
                 
                 self.input_ids.append(input_id)
                 self.token_type_ids.append(token_type_id)
                 self.labels.append(lm_label)
-                
-        self.input_ids = torch.LongTensor(self.input_ids)  # (N, L)
-        self.token_type_ids = torch.LongTensor(self.token_type_ids)  # (N, L)
-        self.labels = torch.LongTensor(self.labels)  # (N, L)
     
     def __len__(self):
-        return self.input_ids.shape[0]
+        return len(self.input_ids)
     
     def __getitem__(self, idx):
         return self.input_ids[idx], self.token_type_ids[idx], self.labels[idx]
     
-    def make_padding(self, input_id, token_type_id, lm_label, pad_id, max_len):
-        left = max_len - len(input_id)
+    
+class PadCollate():
+    def __init__(self, pad_id):
+        self.pad_id = pad_id
         
-        input_id += [pad_id] * left
-        token_type_id += [pad_id] * left
-        lm_label += [-100] * left
-        
-        return input_id, token_type_id, lm_label
+    def pad_collate(self, batch):
+        input_ids, token_type_ids, labels =[], [], []
+        for idx, seqs in enumerate(batch):
+            input_ids.append(torch.LongTensor(seqs[0]))
+            token_type_ids.append(torch.LongTensor(seqs[0]))
+            labels.append(torch.LongTensor(seqs[2]))
+            
+        input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=self.pad_id)
+        token_type_ids = torch.nn.utils.rnn.pad_sequence(token_type_ids, batch_first=True, padding_value=self.pad_id)
+        labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=-100)
+    
+        return input_ids, token_type_ids, labels
