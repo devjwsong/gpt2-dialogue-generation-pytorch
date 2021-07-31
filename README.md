@@ -24,10 +24,11 @@ I did not include the persona information unlike the original version.
 
 <br/>
 
+**Arguments for training**
+
 | Argument              | Type              | Description                                                  | Default               |
 | --------------------- | ----------------- | ------------------------------------------------------------ | --------------------- |
 | `seed` | `int` | The random seed. | `0` |
-| `mode` | `str` | The running mode: train or inference? | *YOU SHOULD SPECIFY* |
 | `data_dir`            | `str`        | The name of the parent directory where data files are stored. | `"data"`              |
 | `train_prefix` | `str`       | The prefix of the train data files' name.                    | `"train"`             |
 | `valid_prefix` | `str`       | The prefix of the validation data files' name.               | `"valid"`    |
@@ -44,10 +45,30 @@ I did not include the persona information unlike the original version.
 | `num_epochs`          | `int` | The number of total epochs.   | `10`                  |
 | `max_len`      | `int`   | The maximum length of input sequence.                        | `1024`                |
 | `max_turns`   | `int`   | The maximum number of dialogue histories to include. | `5`                   |
-| `top_p`       | `float` | The top-p value for nucleus sampling decoding. | `0.9`                 |
 | `ckpt_dir`            | `str`        | The path for saved checkpoints.                              | `"saved_models"`      |
 | `ckpt_name`            | `str`        | The default name for the trained model. (without extension)                              | *YOU MIGHT SPECIFY*  |
-| `end_command`         | `str`       | The command to stop the conversation when inferencing.       | `"Abort!"`            |
+
+<br/>
+
+**Arguments for inference**
+
+| Argument      | Type    | Description                                                  | Default              |
+| ------------- | ------- | ------------------------------------------------------------ | -------------------- |
+| `seed`        | `int`   | The random seed.                                             | `0`                  |
+| `data_dir`    | `str`   | The name of the parent directory where data files are stored. | `"data"`             |
+| `model_type`  | `str`   | The model type of GPT-2. (`"gpt2"`, `"gpt2-medium"`, `"gpt2-large"`, or `"gpt2-xl"`) | `"gpt2"`             |
+| `pad_token`   | `str`   | The pad token.                                               | `"<pad>"`            |
+| `bos_token`   | `str`   | The BOS token.                                               | `"<bos>"`            |
+| `eos_token`   | `str`   | The EOS token.                                               | `"<eos>"`            |
+| `sp1_token`   | `str`   | The speaker1 token.                                          | `"<sp1>"`            |
+| `sp2_token`   | `str`   | The speaker2 token.                                          | `"<sp2>"`            |
+| `gpu`         | `str`   | The index of GPU to use.                                     | `"0"`                |
+| `max_len`     | `int`   | The maximum length of input sequence.                        | `1024`               |
+| `max_turns`   | `int`   | The maximum number of dialogue histories to include.         | `5`                  |
+| `top_p`       | `float` | The top-p value for nucleus sampling decoding.               | `0.9`                |
+| `ckpt_dir`    | `str`   | The path for saved checkpoints.                              | `"saved_models"`     |
+| `ckpt_name`   | `str`   | The default name for the trained model. (without extension)  | *YOU SHOULD SPECIFY* |
+| `end_command` | `str`   | The command to stop the conversation when inferencing.       | `"Abort!"`           |
 
 <br/>
 
@@ -101,22 +122,20 @@ There are 4 types of the default datasets as follows.
 
 3. Run the following command to train the model.
 
-   You should set the `mode` argument as `"train"` to train the model.
-
    If you want to train it starting from a specific checkpoint, add the argument `ckpt_name` and make sure to notify the proper checkpoint name.
 
    ```shell
-   sh exec_main.sh
+sh exec_train.sh
    ```
-
+   
    <br/>
 
 4. Run below command to conduct an inference with the trained model.
 
-   This time, you should set the `mode` as `"inference"` and also are required to give `ckpt_name`.
+   This time, you are required to give a specific `ckpt_name`.
 
    ```shell
-   sh exec_main.sh
+   sh exec_infer.sh
    ```
 
 

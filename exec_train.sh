@@ -1,6 +1,6 @@
 python src/main.py \
     --seed=0 \
-    --mode=MODE \
+    --mode="train" \
     --data_dir="data" \
     --train_prefix="train" \
     --valid_prefix="valid" \
@@ -17,6 +17,4 @@ python src/main.py \
     --num_epochs=10 \
     --max_len=1024 \
     --max_turns=5 \
-    --top_p=0.9 \
-    --ckpt_dir="saved_models" \
-    --end_command="Abort!"
+    --ckpt_dir="saved_models"
