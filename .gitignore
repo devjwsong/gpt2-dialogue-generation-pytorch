@@ -133,5 +133,5 @@ data/
 saved_models/
 
 # Notebook
-run.ipynb
+*.ipynb
 nohup.out

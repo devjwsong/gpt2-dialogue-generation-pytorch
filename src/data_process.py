@@ -18,7 +18,7 @@ persona_chat_url = "https://s3.amazonaws.com/datasets.huggingface.co/personachat
 silence_symbol = "__ SILENCE __"
 
 
-def load_daily_dialog(tokenizer, train_frac):
+def load_daily(tokenizer, train_frac):
     dataset = load_dataset('daily_dialog')
     train_dialogues = dataset['train']['dialog']
     valid_dialogues = dataset['validation']['dialog']
@@ -50,7 +50,7 @@ def load_daily_dialog(tokenizer, train_frac):
     return train_dialogues, valid_dialogues, train_utter_num, valid_utter_num
     
     
-def load_empathetic_dialogues(tokenizer, train_frac):
+def load_empathetic(tokenizer, train_frac):
     dataset = load_dataset('empathetic_dialogues')
     train_data = dataset['train']
     valid_data = dataset['validation']
@@ -104,7 +104,7 @@ def load_empathetic_dialogues(tokenizer, train_frac):
     return train_dialogues, valid_dialogues, train_utter_num, valid_utter_num
 
 
-def load_persona_chat(tokenizer, train_frac):
+def load_persona(tokenizer, train_frac):
     import urllib.request, json
     with urllib.request.urlopen(persona_chat_url) as f:
         dataset = json.loads(f.read().decode())
@@ -141,7 +141,7 @@ def load_persona_chat(tokenizer, train_frac):
     return train_dialogues, valid_dialogues, train_utter_num, valid_utter_num
 
 
-def load_blended_skill_talk(tokenizer, train_frac):
+def load_blended(tokenizer, train_frac):
     dataset = load_dataset('blended_skill_talk')
     data_train = dataset['train']
     data_valid = dataset['validation']
