@@ -1,6 +1,6 @@
 python src/main.py \
     --seed=0 \
-    --mode="inference" \
+    --mode=MODE \
     --data_dir="data" \
     --train_prefix="train" \
     --valid_prefix="valid" \
@@ -13,11 +13,10 @@ python src/main.py \
     --gpu="0" \
     --lr=5e-4 \
     --batch_size=8 \
-    --num_workers=4 \
+    --num_workers=0 \
     --num_epochs=10 \
     --max_len=1024 \
     --max_turns=5 \
     --top_p=0.9 \
     --ckpt_dir="saved_models" \
-    --end_command="Abort!" \
-    --ckpt_name="best_ckpt_epoch=10_valid_loss=5.2573"
+    --end_command="Abort!"
