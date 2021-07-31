@@ -125,7 +125,7 @@ There are 4 types of the default datasets as follows.
    If you want to train it starting from a specific checkpoint, add the argument `ckpt_name` and make sure to notify the proper checkpoint name.
 
    ```shell
-sh exec_train.sh
+   sh exec_train.sh
    ```
    
    <br/>
@@ -137,7 +137,6 @@ sh exec_train.sh
    ```shell
    sh exec_infer.sh
    ```
-
 
 <br/>
 
