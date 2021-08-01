@@ -11,9 +11,9 @@ class CustomDataset(Dataset):
     def __init__(self, prefix, args):
         assert prefix == args.train_prefix or prefix == args.valid_prefix
         
-        print(f"Loading {prefix}_id.txt...")
+        print(f"Loading {prefix}_id.pickle...")
         with open(f"{args.data_dir}/{prefix}_ids.pickle", 'rb') as f:
-            dialogues_ids = pickle.load(f)
+            dialogues_ids = pickle.load(f)[:10]
         
         self.input_ids = []  # (N, L)
         self.token_type_ids = []  # (N, L)
