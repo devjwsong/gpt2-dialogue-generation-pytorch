@@ -13,7 +13,7 @@ class CustomDataset(Dataset):
         
         print(f"Loading {prefix}_id.pickle...")
         with open(f"{args.data_dir}/{prefix}_ids.pickle", 'rb') as f:
-            dialogues_ids = pickle.load(f)[:10]
+            dialogues_ids = pickle.load(f)
         
         self.input_ids = []  # (N, L)
         self.token_type_ids = []  # (N, L)
