@@ -5,9 +5,7 @@ python src/main.py \
     --train_prefix="train" \
     --valid_prefix="valid" \
     --model_type="gpt2" \
-    --pad_token="<pad>" \
     --bos_token="<bos>" \
-    --eos_token="<eos>" \
     --sp1_token="<sp1>" \
     --sp2_token="<sp2>" \
     --gpu="0" \

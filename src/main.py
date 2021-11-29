@@ -28,20 +28,16 @@ class Manager():
         self.tokenizer = GPT2Tokenizer.from_pretrained(self.args.model_type)
         special_tokens = {
             'bos_token': self.args.bos_token,
-            'eos_token': self.args.eos_token,
-            'pad_token': self.args.pad_token,
             'additional_special_tokens': [self.args.sp1_token, self.args.sp2_token]
         }
+        self.args.eos_token = self.tokenizer.eos_token
         num_new_tokens = self.tokenizer.add_special_tokens(special_tokens)
         vocab = self.tokenizer.get_vocab()
         self.args.vocab_size = len(vocab)
-        self.args.pad_id = vocab[self.args.pad_token]
         self.args.bos_id = vocab[self.args.bos_token]
         self.args.eos_id = vocab[self.args.eos_token]
         self.args.sp1_id = vocab[self.args.sp1_token]
         self.args.sp2_id = vocab[self.args.sp2_token]
-        
-        self.args.utter_len = (self.args.max_len-self.args.max_turns-2) // self.args.max_turns
         
         # Load model    
         print("Loading the model...")
@@ -62,7 +58,7 @@ class Manager():
             print("Loading train & valid data...")
             train_set = CustomDataset(self.args.train_prefix, self.args)
             valid_set = CustomDataset(self.args.valid_prefix, self.args)
-            ppd = PadCollate(pad_id=self.args.pad_id)
+            ppd = PadCollate(eos_id=self.args.eos_id)
             
             self.train_loader = DataLoader(train_set, 
                                            collate_fn=ppd.pad_collate, 
@@ -126,14 +122,14 @@ class Manager():
             train_losses = []
             train_ppls = []
             for i, batch in enumerate(tqdm(self.train_loader)):
-                input_ids, token_type_ids, lm_labels = batch
-                input_ids, token_type_ids, lm_labels = \
-                    input_ids.to(self.args.device), token_type_ids.to(self.args.device), lm_labels.to(self.args.device)
+                input_ids, token_type_ids, labels = batch
+                input_ids, token_type_ids, labels = \
+                    input_ids.to(self.args.device), token_type_ids.to(self.args.device), labels.to(self.args.device)
                 
                 outputs = self.model(
                     input_ids=input_ids,
                     token_type_ids = token_type_ids,
-                    labels = lm_labels
+                    labels = labels
                 )
                 
                 loss, logits = outputs[0], outputs[1]
@@ -186,14 +182,14 @@ class Manager():
         valid_ppls = []
         with torch.no_grad():
             for i, batch in enumerate(tqdm(self.valid_loader)):
-                input_ids, token_type_ids, lm_labels = batch
-                input_ids, token_type_ids, lm_labels = \
-                    input_ids.to(self.args.device), token_type_ids.to(self.args.device), lm_labels.to(self.args.device)
+                input_ids, token_type_ids, labels = batch
+                input_ids, token_type_ids, labels = \
+                    input_ids.to(self.args.device), token_type_ids.to(self.args.device), labels.to(self.args.device)
                 
                 outputs = self.model(
                     input_ids=input_ids,
                     token_type_ids = token_type_ids,
-                    labels = lm_labels
+                    labels = labels
                 )
                 
                 loss, logits = outputs[0], outputs[1]
@@ -262,8 +258,20 @@ class Manager():
                     next_sp_id = self.args.sp2_id
                 
                 if cur_sp == 1:
-                    output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_sp_id)
-                    res = self.tokenizer.decode(output_id)
+                    # output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_sp_id)
+                    res_id = [next_sp_id]
+                    res_type_id = [next_sp_id]
+                    input_ids = list(chain.from_iterable(input_ids_list)) + res_id
+                    token_type_ids = list(chain.from_iterable(token_type_ids_list)) + res_type_id
+                    input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.args.device)
+                    token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0).to(self.args.device)
+                    output_id = self.model.generate(
+                        input_ids=input_ids, token_type_ids=token_type_ids,
+                        do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
+                        output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
+                    ).sequences
+                    # res = self.tokenizer.decode(output_id)
+                    res = self.tokenizer.decode(output_id[0].tolist(), skip_special_tokens=True)
 
                     print(f"Bot: {res}")
                 
@@ -325,9 +333,7 @@ if __name__=='__main__':
     parser.add_argument('--train_prefix', type=str, default="train", help="The prefix of the train data files' name.")
     parser.add_argument('--valid_prefix', type=str, default="valid", help="The prefix of the validation data files' name.")
     parser.add_argument('--model_type', type=str, default="gpt2", help="The model type of GPT-2.")
-    parser.add_argument('--pad_token', type=str, default="<pad>", help="The pad token.")
     parser.add_argument('--bos_token', type=str, default="<bos>", help="The BOS token.")
-    parser.add_argument('--eos_token', type=str, default="<eos>", help="The EOS token.")
     parser.add_argument('--sp1_token', type=str, default="<sp1>", help="The speaker1 token.")
     parser.add_argument('--sp2_token', type=str, default="<sp2>", help="The speaker2 token.")
     parser.add_argument('--gpu', type=str, default="0", help="The index of GPU to use.")
