@@ -1,4 +1,4 @@
-python src/data_load.py \
+python src/load_data.py \
     --data_dir="data" \
     --train_prefix="train" \
     --valid_prefix="valid" \

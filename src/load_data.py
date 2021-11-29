@@ -1,6 +1,6 @@
 from tqdm import tqdm
-from transformers import *
-from data_process import *
+from transformers import GPT2Tokenizer
+from process_data import *
 
 import argparse
 import os

@@ -1,5 +1,5 @@
-from transformers import *
-from custom_data import *
+from transformers import GPT2Tokenizer, GPT2LMHeadModel, get_polynomial_decay_schedule_with_warmup
+from custom_dataset import *
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
@@ -10,6 +10,7 @@ import os, sys
 import numpy as np
 import argparse
 import copy
+import math
 import random
 
 
@@ -63,7 +64,6 @@ class Manager():
             valid_set = CustomDataset(self.args.valid_prefix, self.args)
             ppd = PadCollate(pad_id=self.args.pad_id)
             
-            self.fix_seed(self.args.seed)
             self.train_loader = DataLoader(train_set, 
                                            collate_fn=ppd.pad_collate, 
                                            shuffle=True, 
@@ -78,6 +78,18 @@ class Manager():
             
             if not os.path.exists(self.args.ckpt_dir):
                 os.makedirs(self.args.ckpt_dir)
+                
+            # Calculate total training steps
+            num_batches = len(self.train_loader)
+            args.total_train_steps = args.num_epochs * num_batches
+            args.warmup_steps = int(args.warmup_ratio * args.total_train_steps)
+            
+            self.sched = get_polynomial_decay_schedule_with_warmup(
+                self.optim,
+                num_warmup_steps=args.warmup_steps,
+                num_training_steps=args.total_train_steps,
+                power=2
+            )
         
         if self.args.ckpt_name is not None:
             if os.path.exists(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt"):
@@ -103,6 +115,7 @@ class Manager():
         print("Setting finished.")
               
     def train(self):
+        self.fix_seed(self.args.seed)  # Fix seed before training
         print("Training starts.")
         
         start_epoch = self.last_epoch+1
@@ -128,9 +141,14 @@ class Manager():
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()
+                self.sched.step()
                 
-                train_losses.append(loss)
-                train_ppls.append(torch.exp(loss))
+                train_losses.append(loss.detach())
+                ppl = torch.exp(loss.detach())
+                if math.isnan(ppl):
+                    train_ppls.append(1e+8)
+                else:
+                    train_ppls.append(ppl)
             
             train_losses = [loss.item() for loss in train_losses]
             train_ppls = [ppl.item() for ppl in train_ppls]
@@ -180,8 +198,12 @@ class Manager():
                 
                 loss, logits = outputs[0], outputs[1]
                 
-                valid_losses.append(loss)
-                valid_ppls.append(torch.exp(loss))
+                valid_losses.append(loss.detach())
+                ppl = torch.exp(loss.detach())
+                if math.isnan(ppl):
+                    valid_ppls.append(1e+8)
+                else:
+                    valid_ppls.append(ppl)
             
             valid_losses = [loss.item() for loss in valid_losses]
             valid_ppls = [ppl.item() for ppl in valid_ppls]
@@ -310,6 +332,7 @@ if __name__=='__main__':
     parser.add_argument('--sp2_token', type=str, default="<sp2>", help="The speaker2 token.")
     parser.add_argument('--gpu', type=str, default="0", help="The index of GPU to use.")
     parser.add_argument('--lr', type=float, default=5e-4, help="The learning rate.")
+    parser.add_argument('--warmup_ratio', type=float, default=0.0, help="The ratio of warmup steps to the total training steps.")
     parser.add_argument('--batch_size', type=int, default=8, help="The batch size.")
     parser.add_argument('--num_workers', type=int, default=0, help="The number of workers for data loading.")
     parser.add_argument('--num_epochs', type=int, default=10, help="The number of total epochs.")

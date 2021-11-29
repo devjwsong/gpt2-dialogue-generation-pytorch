@@ -11,9 +11,10 @@ python src/main.py \
     --sp1_token="<sp1>" \
     --sp2_token="<sp2>" \
     --gpu="0" \
-    --lr=5e-4 \
+    --lr=1e-4 \
+    --warmup_ratio=0.1 \
     --batch_size=8 \
-    --num_workers=0 \
+    --num_workers=4 \
     --num_epochs=10 \
     --max_len=1024 \
     --max_turns=5 \
