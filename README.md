@@ -1,4 +1,4 @@
-# gpt2-chatbot-pytorch
+# gpt2-dialogue-generation-pytorch
 
 This is a multi-turn chatbot project using the pre-trained GPT-2[[1]](#1) introduced in *How to build a State-of-the-Art Conversational AI with Transfer Learning*[[2]](#2).
 
