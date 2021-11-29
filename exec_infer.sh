@@ -1,11 +1,9 @@
 python src/main.py \
     --seed=0 \
-    --mode="inference" \
+    --mode="infer" \
     --data_dir="data" \
     --model_type="gpt2" \
-    --pad_token="<pad>" \
     --bos_token="<bos>" \
-    --eos_token="<eos>" \
     --sp1_token="<sp1>" \
     --sp2_token="<sp2>" \
     --gpu="1" \
@@ -13,5 +11,5 @@ python src/main.py \
     --max_turns=5 \
     --top_p=0.9 \
     --ckpt_dir="saved_models" \
-    --ckpt_name="best_ckpt_epoch=2_valid_loss=2.511" \
+    --ckpt_name="best_ckpt_epoch=1_valid_loss=2.7788" \
     --end_command="Abort!"

@@ -209,74 +209,50 @@ class Manager():
         return valid_loss, valid_ppl
         
               
-    def inference(self):
+    def infer(self):
         print("Let's start!")
         print(f"If you want to quit the conversation, please type \"{self.args.end_command}\".")
         self.model.eval()
+        self.fix_seed(self.args.seed)
         
         with torch.no_grad():
-            cur_sp = 1
-            input_ids_list = []
-            token_type_ids_list = []
-            t = 0
-            output_id = None
+            input_hists = []
             
             while True:
-                if cur_sp == 1:
-                    cur_sp_id = self.args.sp1_id
-                    utter = input("You: ")
+                utter = input("You: ")
+                if utter == self.args.end_command:
+                    print("Bot: Good bye.")
+                    break
                     
-                    if utter == self.args.end_command:
-                        print("Bot: Good bye.")
-                        break
+                input_ids = [self.args.sp1_id] + self.tokenizer.encode(utter)
+                input_hists.append(input_ids)
+                
+                if len(input_hists) >= self.args.max_turns:
+                    num_exceeded = len(input_hists) - self.args.max_turns
+                    input_hists = input_hists[num_exceeded:]
                     
-                    input_id = [cur_sp_id] + self.tokenizer.encode(utter)
-                    
-                    if t == 0:
-                        input_id = [self.args.bos_id] + input_id
-                else:
-                    cur_sp_id = self.args.sp2_id
-                    input_id = copy.deepcopy(output_id)
-                    
-                token_type_id = [cur_sp_id] * len(input_id)
+                # output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_sp_id)
+                input_ids = [self.args.bos_id] + list(chain.from_iterable(input_hists)) + [self.args.sp2_id]
+                start_sp_id = input_hists[0][0]
+                next_sp_id = self.args.sp1_id if start_sp_id == self.args.sp2_id else self.args.sp2_id
+                token_type_ids = [[start_sp_id] * len(hist) if h % 2 == 0 else [next_sp_id] * len(hist) for h, hist in enumerate(input_hists)]
+                assert len(token_type_ids) == len(input_hists)
+                token_type_ids = [start_sp_id] + list(chain.from_iterable(input_hists)) + [self.args.sp2_id]
+                assert len(input_ids) == len(token_type_ids)
+                input_len = len(input_ids)
                 
-                if input_id[-1] == self.args.eos_id:
-                    input_id = input_id[:-1]
-                    token_type_id = token_type_id[:-1] 
+                input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.args.device)
+                token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0).to(self.args.device)
+                output_ids = self.model.generate(
+                    input_ids=input_ids, token_type_ids=token_type_ids, pad_token_id=self.args.eos_id,
+                    do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
+                    output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
+                ).sequences
+                # res = self.tokenizer.decode(output_id)
+                res = self.tokenizer.decode(output_ids[0].tolist()[input_len:], skip_special_tokens=True)
                 
-                input_ids_list.append(input_id)
-                token_type_ids_list.append(token_type_id)
-                
-                if t >= self.args.max_turns:
-                    input_ids_list = input_ids_list[1:]
-                    token_type_ids_list = token_type_ids_list[1:]
-                
-                next_sp = (cur_sp % 2) + 1
-                if next_sp == 1:
-                    next_sp_id = self.args.sp1_id
-                else:
-                    next_sp_id = self.args.sp2_id
-                
-                if cur_sp == 1:
-                    # output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_sp_id)
-                    res_id = [next_sp_id]
-                    res_type_id = [next_sp_id]
-                    input_ids = list(chain.from_iterable(input_ids_list)) + res_id
-                    token_type_ids = list(chain.from_iterable(token_type_ids_list)) + res_type_id
-                    input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.args.device)
-                    token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0).to(self.args.device)
-                    output_id = self.model.generate(
-                        input_ids=input_ids, token_type_ids=token_type_ids,
-                        do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
-                        output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
-                    ).sequences
-                    # res = self.tokenizer.decode(output_id)
-                    res = self.tokenizer.decode(output_id[0].tolist(), skip_special_tokens=True)
-
-                    print(f"Bot: {res}")
-                
-                cur_sp = next_sp
-                t += 1
+                print(f"Bot: {res}")
+                input_hists.append([self.args.sp2_id] + self.tokenizer.encode(res))
                 
     def nucleus_sampling(self, input_ids_list, token_type_ids_list, next_sp_id):
         output_id = []
@@ -351,7 +327,7 @@ if __name__=='__main__':
               
     args = parser.parse_args()
     
-    assert args.mode in ["train", "inference"]
+    assert args.mode in ["train", "infer"]
     assert args.model_type in ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
     
     args.data_dir = f"{args.data_dir}/{args.model_type}"
@@ -361,8 +337,8 @@ if __name__=='__main__':
         manager = Manager(args)
         manager.train()
         
-    elif args.mode == 'inference':
+    elif args.mode == 'infer':
         assert args.ckpt_name is not None, "Please specify the trained model checkpoint."
         
         manager = Manager(args)
-        manager.inference()
+        manager.infer()
