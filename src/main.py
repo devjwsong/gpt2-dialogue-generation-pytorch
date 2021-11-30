@@ -231,7 +231,6 @@ class Manager():
                     num_exceeded = len(input_hists) - self.args.max_turns
                     input_hists = input_hists[num_exceeded:]
                     
-                # output_id = self.nucleus_sampling(input_ids_list, token_type_ids_list, next_sp_id)
                 input_ids = [self.args.bos_id] + list(chain.from_iterable(input_hists)) + [self.args.sp2_id]
                 start_sp_id = input_hists[0][0]
                 next_sp_id = self.args.sp1_id if start_sp_id == self.args.sp2_id else self.args.sp2_id
@@ -243,57 +242,48 @@ class Manager():
                 
                 input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.args.device)
                 token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0).to(self.args.device)
-                output_ids = self.model.generate(
-                    input_ids=input_ids, token_type_ids=token_type_ids, pad_token_id=self.args.eos_id,
-                    do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
-                    output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
-                ).sequences
-                # res = self.tokenizer.decode(output_id)
-                output_ids = output_ids[0].tolist()[input_len:]
+                
+                output_ids = self.nucleus_sampling(input_ids, token_type_ids, input_len)                
+                # output_ids = self.model.generate(
+                #     input_ids=input_ids, token_type_ids=token_type_ids, pad_token_id=self.args.eos_id,
+                #     do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
+                #     output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
+                # ).sequences
+                # output_ids = output_ids[0].tolist()[input_len:]
                 res = self.tokenizer.decode(output_ids, skip_special_tokens=True)
                 
                 print(f"Bot: {res}")
                 input_hists.append([self.args.sp2_id] + self.tokenizer.encode(res))
                 
-    def nucleus_sampling(self, input_ids_list, token_type_ids_list, next_sp_id):
-        output_id = []
-        res_id = [next_sp_id]
-        res_type_id = [next_sp_id]
-        for pos in range(self.args.utter_len):
-            input_ids = list(chain.from_iterable(input_ids_list)) + res_id
-            token_type_ids = list(chain.from_iterable(token_type_ids_list)) + res_type_id
-            input_len = len(input_ids)
-            
-            left = self.args.max_len - len(input_ids)
-            input_ids += [self.args.pad_id] * left
-            token_type_ids += [self.args.pad_id] * left
-
-            assert len(input_ids) == len(token_type_ids), "There is something wrong in dialogue process."
-            
-            input_ids = torch.LongTensor(input_ids).unsqueeze(0).to(self.args.device)  # (1, L)
-            token_type_ids = torch.LongTensor(token_type_ids).unsqueeze(0).to(self.args.device)  # (1, L)
-            
-            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[0][:, input_len-1]  # (1, vocab_size)
-            output = F.softmax(output, dim=-1)  # (1, vocab_size)
+    def nucleus_sampling(self, input_ids, token_type_ids, input_len):
+        output_ids = []
+        for pos in range(input_len, self.args.max_len):
+            output = self.model(input_ids=input_ids, token_type_ids=token_type_ids)[0][:, pos-1]  # (1, V)
+            output = F.softmax(output, dim=-1)  # (1, V)
             
             sorted_probs, sorted_idxs = torch.sort(output, descending=True)
-            cumsum_probs = torch.cumsum(sorted_probs, dim=-1)  # (1, vocab_size)
+            cumsum_probs = torch.cumsum(sorted_probs, dim=-1)  # (1, V)
             idx_remove = cumsum_probs > self.args.top_p
-            sorted_probs[idx_remove] = 1e-8
-            sorted_probs /= torch.sum(sorted_probs, dim=-1, keepdim=True)  # (1, vocab_size)
+            idx_remove[:, 1:] = idx_remove[:, :-1].clone()
+            idx_remove[:, 0] = False
+            sorted_probs[idx_remove] = 0.0
+            sorted_probs /= torch.sum(sorted_probs, dim=-1, keepdim=True)  # (1, V)
             
-            # Random sampling
-            probs = torch.zeros(output.shape).to(self.args.device).scatter_(-1, sorted_idxs, sorted_probs)  # (1, vocab_size)
-            idx = torch.multinomial(probs, 1).squeeze(-1).squeeze(0).item()
+            probs = torch.zeros(output.shape, device=self.args.device).scatter_(-1, sorted_idxs, sorted_probs)  # (1, V)
+            idx = torch.multinomial(probs, 1)  # (1, 1)
             
-            if len(output_id) == self.args.utter_len or idx == self.args.eos_id:
+            idx_item = idx.squeeze(-1).squeeze(-1).item()
+            output_ids.append(idx_item)
+            
+            if idx_item == self.args.eos_id:
                 break
-            else:
-                output_id.append(idx)
-                res_id.append(idx)
-                res_type_id.append(next_sp_id)
                 
-        return output_id
+            input_ids = torch.cat((input_ids, idx), dim=-1)
+            next_type_id = torch.LongTensor([[self.args.sp2_id]]).to(self.args.device)
+            token_type_ids = torch.cat((token_type_ids, next_type_id), dim=-1)
+            assert input_ids.shape == token_type_ids.shape
+            
+        return output_ids
     
     def fix_seed(self, seed):
         np.random.seed(seed)

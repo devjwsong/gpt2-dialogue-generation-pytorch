@@ -9,7 +9,7 @@ python src/main.py \
     --gpu="0" \
     --max_len=1024 \
     --max_turns=5 \
-    --top_p=0.9 \
+    --top_p=0.8 \
     --ckpt_dir="saved_models" \
     --ckpt_name=CKPT_NAME \
     --end_command="Abort!"
