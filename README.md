@@ -33,13 +33,12 @@ I did not include the persona information unlike the original version.
 | `train_prefix` | `str`       | The prefix of the train data files' name.                    | `"train"`             |
 | `valid_prefix` | `str`       | The prefix of the validation data files' name.               | `"valid"`    |
 | `model_type` | `str` | The model type of GPT-2. (`"gpt2"`, `"gpt2-medium"`, `"gpt2-large"`, or `"gpt2-xl"`) | `"gpt2"` |
-| `pad_token`           | `str`       | The pad token.                              | `"<pad>"`             |
 | `bos_token`          | `str`        | The BOS token.           | `"<bos>"`             |
-| `eos_token`         | `str`        | The EOS token.                        | `"<eos>"`             |
 | `sp1_token`  | `str`       | The speaker1 token.                | `"<sp1>"`      |
 | `sp2_token`  | `str`       | The speaker2 token.              | `"<sp2>"`     |
 | `gpu`           | `str`        | The index of GPU to use. | `"0"`              |
-| `lr`      | `float` | The learning rate.                                           | `5e-4`                |
+| `lr`      | `float` | The learning rate.                                       | `2e-5`            |
+| `warmup_ratio` | `float` | The ratio of warmup steps to the total training steps. | `0.1` |
 | `batch_size`          | `int` | The batch size.                                              | `8`                  |
 | `num_workers` | `int` | The number of workers for data loading. | `0` |
 | `num_epochs`          | `int` | The number of total epochs.   | `10`                  |
@@ -57,15 +56,13 @@ I did not include the persona information unlike the original version.
 | `seed`        | `int`   | The random seed.                                             | `0`                  |
 | `data_dir`    | `str`   | The name of the parent directory where data files are stored. | `"data"`             |
 | `model_type`  | `str`   | The model type of GPT-2. (`"gpt2"`, `"gpt2-medium"`, `"gpt2-large"`, or `"gpt2-xl"`) | `"gpt2"`             |
-| `pad_token`   | `str`   | The pad token.                                               | `"<pad>"`            |
 | `bos_token`   | `str`   | The BOS token.                                               | `"<bos>"`            |
-| `eos_token`   | `str`   | The EOS token.                                               | `"<eos>"`            |
 | `sp1_token`   | `str`   | The speaker1 token.                                          | `"<sp1>"`            |
 | `sp2_token`   | `str`   | The speaker2 token.                                          | `"<sp2>"`            |
 | `gpu`         | `str`   | The index of GPU to use.                                     | `"0"`                |
 | `max_len`     | `int`   | The maximum length of input sequence.                        | `1024`               |
 | `max_turns`   | `int`   | The maximum number of dialogue histories to include.         | `5`                  |
-| `top_p`       | `float` | The top-p value for nucleus sampling decoding.               | `0.9`                |
+| `top_p`       | `float` | The top-p value for nucleus sampling decoding.               | `0.8`                |
 | `ckpt_dir`    | `str`   | The path for saved checkpoints.                              | `"saved_models"`     |
 | `ckpt_name`   | `str`   | The default name for the trained model. (without extension)  | *YOU SHOULD SPECIFY* |
 | `end_command` | `str`   | The command to stop the conversation when inferencing.       | `"Abort!"`           |
