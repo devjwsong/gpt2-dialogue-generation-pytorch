@@ -2,7 +2,7 @@ python src/main.py \
     --seed=0 \
     --mode="infer" \
     --data_dir="data" \
-    --model_type="gpt2" \
+    --model_type="microsoft/DialoGPT-small" \
     --bos_token="<bos>" \
     --sp1_token="<sp1>" \
     --sp2_token="<sp2>" \
@@ -11,5 +11,5 @@ python src/main.py \
     --max_turns=5 \
     --top_p=0.9 \
     --ckpt_dir="saved_models" \
-    --ckpt_name="best_ckpt_epoch=1_valid_loss=2.7788" \
+    --ckpt_name="best_ckpt_epoch=5_valid_loss=2.5697" \
     --end_command="Abort!"

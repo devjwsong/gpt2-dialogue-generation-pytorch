@@ -72,7 +72,10 @@ if __name__=='__main__':
     
     args = parser.parse_args()
     
-    assert args.model_type in ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
+    assert args.model_type in [
+        "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl",
+        "microsoft/DialoGPT-small", "microsoft/DialoGPT-medium", "microsoft/DialoGPT-large"
+    ]
     
     print("Loading the tokenizer...")
     tokenizer = GPT2Tokenizer.from_pretrained(args.model_type)

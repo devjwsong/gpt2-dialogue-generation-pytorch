@@ -4,12 +4,12 @@ python src/main.py \
     --data_dir="data" \
     --train_prefix="train" \
     --valid_prefix="valid" \
-    --model_type="gpt2" \
+    --model_type="microsoft/DialoGPT-small" \
     --bos_token="<bos>" \
     --sp1_token="<sp1>" \
     --sp2_token="<sp2>" \
     --gpu="0" \
-    --lr=1e-4 \
+    --lr=5e-5 \
     --warmup_ratio=0.1 \
     --batch_size=8 \
     --num_workers=4 \

@@ -249,7 +249,8 @@ class Manager():
                     output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
                 ).sequences
                 # res = self.tokenizer.decode(output_id)
-                res = self.tokenizer.decode(output_ids[0].tolist()[input_len:], skip_special_tokens=True)
+                output_ids = output_ids[0].tolist()[input_len:]
+                res = self.tokenizer.decode(output_ids, skip_special_tokens=True)
                 
                 print(f"Bot: {res}")
                 input_hists.append([self.args.sp2_id] + self.tokenizer.encode(res))
@@ -328,7 +329,10 @@ if __name__=='__main__':
     args = parser.parse_args()
     
     assert args.mode in ["train", "infer"]
-    assert args.model_type in ["gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl"]
+    assert args.model_type in [
+        "gpt2", "gpt2-medium", "gpt2-large", "gpt2-xl",
+        "microsoft/DialoGPT-small", "microsoft/DialoGPT-medium", "microsoft/DialoGPT-large"
+    ]
     
     args.data_dir = f"{args.data_dir}/{args.model_type}"
     args.ckpt_dir = f"{args.ckpt_dir}/{args.model_type}"
