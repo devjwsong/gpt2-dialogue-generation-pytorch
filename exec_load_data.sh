@@ -3,5 +3,5 @@ python src/load_data.py \
     --train_prefix="train" \
     --valid_prefix="valid" \
     --train_frac=0.8 \
-    --model_type="microsoft/DialoGPT-small"
+    --model_type="gpt2"
 

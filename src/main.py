@@ -90,7 +90,7 @@ class Manager():
         if self.args.ckpt_name is not None:
             if os.path.exists(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt"):
                 print("Loading the trained checkpoint...")
-                ckpt = torch.load(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt")
+                ckpt = torch.load(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt", map_location=self.args.device)
                 self.model.load_state_dict(ckpt['model_state_dict'])
                 
                 if self.args.mode == 'train':
@@ -314,8 +314,8 @@ if __name__=='__main__':
     parser.add_argument('--sp1_token', type=str, default="<sp1>", help="The speaker1 token.")
     parser.add_argument('--sp2_token', type=str, default="<sp2>", help="The speaker2 token.")
     parser.add_argument('--gpu', type=str, default="0", help="The index of GPU to use.")
-    parser.add_argument('--lr', type=float, default=5e-4, help="The learning rate.")
-    parser.add_argument('--warmup_ratio', type=float, default=0.0, help="The ratio of warmup steps to the total training steps.")
+    parser.add_argument('--lr', type=float, default=2e-5, help="The learning rate.")
+    parser.add_argument('--warmup_ratio', type=float, default=0.1, help="The ratio of warmup steps to the total training steps.")
     parser.add_argument('--batch_size', type=int, default=8, help="The batch size.")
     parser.add_argument('--num_workers', type=int, default=0, help="The number of workers for data loading.")
     parser.add_argument('--num_epochs', type=int, default=10, help="The number of total epochs.")

@@ -46,8 +46,8 @@ class CustomDataset(Dataset):
                             token_type_ids = [start_sp_id] + list(chain.from_iterable(token_type_ids)) + [args.sp2_id]
                             assert len(input_ids) == len(token_type_ids)
                             
-                            labels = [[-100] * len(ctx) if h < len(contexts)-1 else ctx for c, ctx in enumerate(contexts)]
-                            assert labels[-1] == contexts[-1]
+                            labels = [[-100] * len(ctx) if c < len(contexts)-1 else [-100] + ctx[1:] for c, ctx in enumerate(contexts)]
+                            assert labels[-1][1:] == contexts[-1][1:]
                             labels = [-100] + list(chain.from_iterable(labels)) + [args.eos_id]
                             assert len(input_ids) == len(labels)
                             
