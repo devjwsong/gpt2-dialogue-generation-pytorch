@@ -3,6 +3,7 @@ from custom_dataset import *
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
+from torch.utils.tensorboard import SummaryWriter
 from itertools import chain
 
 import torch
@@ -86,6 +87,8 @@ class Manager():
                 num_training_steps=args.total_train_steps,
                 power=2
             )
+            
+            self.writer = SummaryWriter()
         
         if self.args.ckpt_name is not None:
             if os.path.exists(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt"):
@@ -141,16 +144,16 @@ class Manager():
                 
                 train_losses.append(loss.detach())
                 ppl = torch.exp(loss.detach())
-                if math.isnan(ppl):
-                    train_ppls.append(1e+8)
-                else:
-                    train_ppls.append(ppl)
+                train_ppls.append(ppl)
             
             train_losses = [loss.item() for loss in train_losses]
-            train_ppls = [ppl.item() for ppl in train_ppls]
+            train_ppls = [ppl.item() if not math.isinf(ppl.item()) else 1e+8 for ppl in train_ppls]
             train_loss = np.mean(train_losses)
             train_ppl = np.mean(train_ppls)
             print(f"Train loss: {train_loss} || Train perplexity: {train_ppl}")
+            
+            self.writer.add_scalar("Loss/train", train_loss, epoch)
+            self.writer.add_scalar("PPL/train", train_ppl, epoch)
             
             self.last_epoch += 1
             
@@ -171,6 +174,18 @@ class Manager():
               
             print(f"Best valid loss: {self.best_loss}")
             print(f"Valid loss: {valid_loss} || Valid perplexity: {valid_ppl}")
+            
+            self.writer.add_scalar("Loss/valid", valid_loss, epoch)
+            self.writer.add_scalar("PPL/valid", valid_ppl, epoch)
+            
+            self.writer.add_scalars("Losses", {
+                'train': train_loss, 
+                'valid': valid_loss,
+            }, epoch)
+            self.writer.add_scalars("PPLs", {
+                'train': train_ppl,
+                'valid': valid_ppl,
+            }, epoch)
               
         print("Training finished!")
     
@@ -196,15 +211,15 @@ class Manager():
                 
                 valid_losses.append(loss.detach())
                 ppl = torch.exp(loss.detach())
-                if math.isnan(ppl):
-                    valid_ppls.append(1e+8)
-                else:
-                    valid_ppls.append(ppl)
+                valid_ppls.append(ppl)
             
             valid_losses = [loss.item() for loss in valid_losses]
-            valid_ppls = [ppl.item() for ppl in valid_ppls]
+            valid_ppls = [ppl.item() if not math.isinf(ppl.item()) else 1e+8 for ppl in valid_ppls]
             valid_loss = np.mean(valid_losses)
             valid_ppl = np.mean(valid_ppls)
+            
+            if math.isnan(valid_ppl):
+                valid_ppl = 1e+8
               
         return valid_loss, valid_ppl
         

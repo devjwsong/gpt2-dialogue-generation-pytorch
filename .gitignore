@@ -135,3 +135,6 @@ saved_models/
 # Notebook
 *.ipynb
 nohup.out
+
+# Tensorboard logs
+runs/
