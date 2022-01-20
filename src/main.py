@@ -251,7 +251,7 @@ class Manager():
                 next_sp_id = self.args.sp1_id if start_sp_id == self.args.sp2_id else self.args.sp2_id
                 token_type_ids = [[start_sp_id] * len(hist) if h % 2 == 0 else [next_sp_id] * len(hist) for h, hist in enumerate(input_hists)]
                 assert len(token_type_ids) == len(input_hists)
-                token_type_ids = [start_sp_id] + list(chain.from_iterable(input_hists)) + [self.args.sp2_id]
+                token_type_ids = [start_sp_id] + list(chain.from_iterable(token_type_ids)) + [self.args.sp2_id]
                 assert len(input_ids) == len(token_type_ids)
                 input_len = len(input_ids)
                 
