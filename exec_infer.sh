@@ -6,7 +6,7 @@ python src/main.py \
     --bos_token="<bos>" \
     --sp1_token="<sp1>" \
     --sp2_token="<sp2>" \
-    --gpu="5" \
+    --gpu="0" \
     --max_len=1024 \
     --max_turns=5 \
     --top_p=0.9 \

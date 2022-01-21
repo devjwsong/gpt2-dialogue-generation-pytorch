@@ -91,9 +91,10 @@ class Manager():
             self.writer = SummaryWriter()
         
         if self.args.ckpt_name is not None:
-            if os.path.exists(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt"):
+            ckpt_path = f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt"
+            if os.path.exists(ckpt_path):
                 print("Loading the trained checkpoint...")
-                ckpt = torch.load(f"{self.args.ckpt_dir}/{self.args.ckpt_name}.ckpt", map_location=self.args.device)
+                ckpt = torch.load(ckpt_path, map_location=self.args.device)
                 self.model.load_state_dict(ckpt['model_state_dict'])
                 
                 if self.args.mode == 'train':
@@ -104,7 +105,7 @@ class Manager():
                 else:
                     print("The inference will start with the specified checkpoint.")
             else:
-                print("Cannot fine the specified checkpoint.")
+                print(f"Cannot fine the specified checkpoint {ckpt_path}.")
                 if self.args.mode == 'train':
                     print("Training will start with the initialized model.")
                 else:
@@ -238,7 +239,7 @@ class Manager():
                 if utter == self.args.end_command:
                     print("Bot: Good bye.")
                     break
-                    
+                
                 input_ids = [self.args.sp1_id] + self.tokenizer.encode(utter)
                 input_hists.append(input_ids)
                 
@@ -249,6 +250,7 @@ class Manager():
                 input_ids = [self.args.bos_id] + list(chain.from_iterable(input_hists)) + [self.args.sp2_id]
                 start_sp_id = input_hists[0][0]
                 next_sp_id = self.args.sp1_id if start_sp_id == self.args.sp2_id else self.args.sp2_id
+                assert start_sp_id != next_sp_id
                 token_type_ids = [[start_sp_id] * len(hist) if h % 2 == 0 else [next_sp_id] * len(hist) for h, hist in enumerate(input_hists)]
                 assert len(token_type_ids) == len(input_hists)
                 token_type_ids = [start_sp_id] + list(chain.from_iterable(token_type_ids)) + [self.args.sp2_id]
@@ -264,7 +266,8 @@ class Manager():
                 #     do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
                 #     output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
                 # ).sequences
-                # output_ids = output_ids[0].tolist()[input_len:]
+                output_ids = output_ids[0].tolist()[input_len:]
+                print(self.tokenizer.convert_ids_to_tokens(output_ids))
                 res = self.tokenizer.decode(output_ids, skip_special_tokens=True)
                 
                 print(f"Bot: {res}")
