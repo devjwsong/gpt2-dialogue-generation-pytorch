@@ -101,7 +101,7 @@ There are 4 types of the default datasets as follows.
 2. Download & Preprocess all datasets.
 
    ```shell
-   sh exec_data_load.sh
+   sh exec_load_data.sh
    ```
 
    After running it, you will have the following data directory structure if you follow the default argument setting.

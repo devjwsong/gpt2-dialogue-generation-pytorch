@@ -1,5 +1,4 @@
 torch==1.7.0
-tqdm==4.47.0
 transformers==4.12.5
 datasets==1.16.1
 sentencepiece==0.1.96
