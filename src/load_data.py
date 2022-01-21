@@ -4,7 +4,7 @@ from process_data import *
 
 import argparse
 import os
-import pickle
+import json
 
 
 dataset_list = ['daily_dialog', 'empathetic_dialogues', 'persona_chat', 'blended_skill_talk']
@@ -43,8 +43,8 @@ def merge_data(tokenizer, args):
 
 def save_data(prefix, data_dir, dialogues, tokenizer):
     print(f"Saving {prefix} text file...")
-    with open(f"{data_dir}/{prefix}_utters.pickle", 'wb') as f:
-        pickle.dump(dialogues, f)
+    with open(f"{data_dir}/{prefix}_utters.json", 'w') as f:
+        json.dump(dialogues, f)
     
     print(f"Saving {prefix} idx file...")
     ids = []
@@ -58,8 +58,8 @@ def save_data(prefix, data_dir, dialogues, tokenizer):
         
     assert len(ids) == len(dialogues)
         
-    with open(f"{data_dir}/{prefix}_ids.pickle", 'wb') as f:
-        pickle.dump(ids, f)
+    with open(f"{data_dir}/{prefix}_ids.json", 'w') as f:
+        json.dump(ids, f)
 
         
 if __name__=='__main__':
