@@ -10,7 +10,7 @@ python src/main.py \
     --sp2_token="<sp2>" \
     --gpu="0" \
     --lr=2e-5 \
-    --warmup_ratio=0.1 \
+    --warmup_ratio=0.0 \
     --batch_size=8 \
     --num_workers=0 \
     --num_epochs=10 \

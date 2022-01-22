@@ -30,14 +30,9 @@ class CustomDataset(Dataset):
                     
             for h in range(len(hists)):
                 if hists[h][0] == args.sp2_id:
-                    for s in range(0, h):
+                    start = max(0, h-args.max_turns+1)
+                    for s in range(start, h):
                         contexts = hists[s:h+1]
-                        if len(contexts) > args.max_turns:
-                            num_exceeded = len(contexts) - args.max_turns
-                            contexts = contexts[num_exceeded:]
-                        if len(contexts) < 2:
-                            break
-                        
                         input_ids = [args.bos_id] + list(chain.from_iterable(contexts)) + [args.eos_id]
                         if len(input_ids) <= args.max_len:
                             start_sp_id, next_sp_id = contexts[0][0], contexts[1][0]

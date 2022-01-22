@@ -100,6 +100,7 @@ class Manager():
                 if self.args.mode == 'train':
                     print(f"The training restarts with the specified checkpoint: {self.args.ckpt_name}.ckpt.")
                     self.optim.load_state_dict(ckpt['optim_state_dict'])
+                    self.sched.load_state_dict(ckpt['sched_state_dict'])
                     self.best_loss = ckpt['loss']
                     self.last_epoch = ckpt['epoch']
                 else:
@@ -165,6 +166,7 @@ class Manager():
                 state_dict = {
                     'model_state_dict': self.model.state_dict(),
                     'optim_state_dict': self.optim.state_dict(),
+                    'sched_state_dict': self.sched.state_dict(),
                     'loss': self.best_loss,
                     'epoch': self.last_epoch
                 }
@@ -244,7 +246,7 @@ class Manager():
                 input_hists.append(input_ids)
                 
                 if len(input_hists) >= self.args.max_turns:
-                    num_exceeded = len(input_hists) - self.args.max_turns
+                    num_exceeded = len(input_hists) - self.args.max_turns + 1
                     input_hists = input_hists[num_exceeded:]
                     
                 input_ids = [self.args.bos_id] + list(chain.from_iterable(input_hists)) + [self.args.sp2_id]
@@ -266,8 +268,7 @@ class Manager():
                 #     do_sample=True, top_p=self.args.top_p, max_length=self.args.max_len,
                 #     output_hidden_states=True, output_scores=True, return_dict_in_generate=True,
                 # ).sequences
-                output_ids = output_ids[0].tolist()[input_len:]
-                print(self.tokenizer.convert_ids_to_tokens(output_ids))
+                # output_ids = output_ids[0].tolist()[input_len:]
                 res = self.tokenizer.decode(output_ids, skip_special_tokens=True)
                 
                 print(f"Bot: {res}")
