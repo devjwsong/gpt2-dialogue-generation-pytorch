@@ -67,7 +67,7 @@ class PadCollate():
         input_ids, token_type_ids, labels =[], [], []
         for idx, seqs in enumerate(batch):
             input_ids.append(torch.LongTensor(seqs[0]))
-            token_type_ids.append(torch.LongTensor(seqs[0]))
+            token_type_ids.append(torch.LongTensor(seqs[1]))
             labels.append(torch.LongTensor(seqs[2]))
             
         input_ids = torch.nn.utils.rnn.pad_sequence(input_ids, batch_first=True, padding_value=self.eos_id)
