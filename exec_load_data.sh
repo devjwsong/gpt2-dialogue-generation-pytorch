@@ -4,4 +4,3 @@ python src/load_data.py \
     --valid_prefix="valid" \
     --train_frac=0.85 \
     --model_type="gpt2"
-

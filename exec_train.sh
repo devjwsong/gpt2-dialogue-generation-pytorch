@@ -1,6 +1,5 @@
-python src/main.py \
+python src/train.py \
     --seed=0 \
-    --mode="train" \
     --data_dir="data" \
     --train_prefix="train" \
     --valid_prefix="valid" \
