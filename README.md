@@ -51,21 +51,14 @@ I did not include the persona information unlike the original version.
 
 **Arguments for inference**
 
-| Argument      | Type    | Description                                                  | Default              |
-| ------------- | ------- | ------------------------------------------------------------ | -------------------- |
-| `seed`        | `int`   | The random seed.                                             | `0`                  |
-| `data_dir`    | `str`   | The name of the parent directory where data files are stored. | `"data"`             |
-| `model_type`  | `str`   | The model type of GPT-2. (`"gpt2"`, `"gpt2-medium"`, `"gpt2-large"`, or `"gpt2-xl"`) | `"gpt2"`             |
-| `bos_token`   | `str`   | The BOS token.                                               | `"<bos>"`            |
-| `sp1_token`   | `str`   | The speaker1 token.                                          | `"<sp1>"`            |
-| `sp2_token`   | `str`   | The speaker2 token.                                          | `"<sp2>"`            |
-| `gpu`         | `str`   | The index of GPU to use.                                     | `"0"`                |
-| `max_len`     | `int`   | The maximum length of input sequence.                        | `1024`               |
-| `max_turns`   | `int`   | The maximum number of dialogue histories to include.         | `5`                  |
-| `top_p`       | `float` | The top-p value for nucleus sampling decoding.               | `0.8`                |
-| `ckpt_dir`    | `str`   | The path for saved checkpoints.                              | `"saved_models"`     |
-| `ckpt_name`   | `str`   | The default name for the trained model. (without extension)  | *YOU SHOULD SPECIFY* |
-| `end_command` | `str`   | The command to stop the conversation when inferencing.       | `"Abort!"`           |
+| Argument      | Type    | Description                                            | Default              |
+| ------------- | ------- | ------------------------------------------------------ | -------------------- |
+| `seed`        | `int`   | The random seed.                                       | `0`                  |
+| `model_path`  | `str`   | The path to the model in HuggingFace Hub.              | *YOU SHOULD SPECIFY* |
+| `gpu`         | `str`   | The index of GPU to use.                               | `"0"`                |
+| `max_turns`   | `int`   | The maximum number of dialogue histories to include.   | `5`                  |
+| `top_p`       | `float` | The top-p value for nucleus sampling decoding.         | `0.8`                |
+| `end_command` | `str`   | The command to stop the conversation when inferencing. | `"Abort!"`           |
 
 <br/>
 
@@ -89,6 +82,8 @@ There are 4 types of the default datasets as follows.
 ---
 
 ### How to run
+
+#### Fine-tuning a new model
 
 1. Install all required packages.
 
@@ -125,11 +120,22 @@ There are 4 types of the default datasets as follows.
    sh exec_train.sh
    ```
    
+
+<br/>
+
+#### Loading a fine-tuned model & Chatting with it
+
+1. Install all required packages.
+
+   ```shell
+   pip install -r requirements.txt
+   ```
+
    <br/>
 
-4. Run below command to conduct an inference with the trained model.
+2. If you already have a model which has been pushed to HuggingFace's Hub, you can load it and chat with the model. If you don't have a model, you can use the model I fine-tuned: https://huggingface.co/devjwsong/gpt2-open-domain-dialogue. To do that, change the argument `--model_path` in `exec_infer.sh` into a corresponding path.
 
-   This time, you are required to give a specific `ckpt_name`.
+   After that, run below command.
 
    ```shell
    sh exec_infer.sh
